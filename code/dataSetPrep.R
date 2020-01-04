@@ -32,8 +32,6 @@ searchData <- searchData %>%
                                    grepl("yahoo", page_domain) ~ "Yahoo",
                                    grepl("bing", page_domain) ~ "Bing",
                                    grepl("duck", page_domain) ~ "DuckDuckGo",
-                                   grepl("aol", page_domain) ~ "AOL",
-                                   grepl("ask", page_domain) ~ "Ask",
                                    TRUE ~ "Other")) %>% 
   select(-page_domain)
 
@@ -58,12 +56,14 @@ surveyData <- surveyData %>%
 
 # drop NAs on target variables
 surveyData <- surveyData %>% 
-  filter(!is.na(turnout))
+  filter(!is.na(turnout)) 
 
-# turnout to binary
+# updating features
 surveyData <- surveyData %>% 
   mutate(turnout = case_when(turnout == 5 ~ 1,
-                             TRUE ~ 0))
+                             TRUE ~ 0),
+         gender = ifelse(gender == 1, 0, 1),
+         familyIncome = ifelse(familyIncome == 97, NA, familyIncome))
 
 # save
 save(surveyData, file = "preppedSurveyData.RData")
