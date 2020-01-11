@@ -1,5 +1,7 @@
 library(tidyverse)
 library(kableExtra)
+library(caret)
+library(stargazer)
 
 searchData <- search_df
 surveyData <- all_waves
@@ -59,73 +61,152 @@ hist(searchesPerUser$numberSearches) # less right skewed than full data set
 
 
 # with vs. without full URLs
+searchData <- searchData %>% 
+  filter(!is.na(search_term))
+
 withList <- unique(searchData$pmxid)
 fullList <- unique(search_df$pmxid)
 withoutList <- fullList[!fullList %in% withList]
 
-withData <- search_df[search_df$pmxid %in% withList, ]
-withoutData <- search_df[search_df$pmxid %in% withoutList, ]
+allSearchData <- search_df
+allSearchData$fullURL <- ifelse(search_df$pmxid %in% withList, 1, 0)
 
-withData <- withData %>% 
-  rename(identity = pmxid)
+allSearchData <- allSearchData %>% 
+  rename(identity = pmxid) %>% 
+  select(identity, fullURL) %>% 
+  mutate(fullURL = factor(fullURL))
 
-withoutData <- withoutData %>% 
-  rename(identity = pmxid)
+surveyDataEdit <- surveyData %>% 
+  select(identity, birthyr, gender, race, educ, marstat,
+         employ, religpew_w5) %>% 
+  mutate(age = factor(
+           case_when(
+             2018 - birthyr < 30 ~ "young",
+             2018 - birthyr < 50 ~ "middle",
+             2018 - birthyr >= 50 ~ "old",
+             TRUE ~ NA_character_), 
+           levels = c("young", "middle", "old")
+         ),
+         gender = factor(
+           case_when(gender == 1 ~ "male", 
+                     gender == 2 ~ "female", 
+                     TRUE ~ NA_character_),
+           levels = c("male", "female")
+         ),
+         race = factor(
+           case_when(race == 1 ~ "white",
+                     race == 2 ~ "black",
+                     race == 3 ~ "hispanic",
+                     race == 4 ~ "asian",
+                     TRUE ~ "other"), 
+           levels = c("white", "black", "hispanic", "asian", "other")
+         ),
+         educ = factor(
+           case_when(educ %in% c(1, 2) ~ "highSchool",
+                     educ %in% c(3, 4, 5) ~ "college",
+                     educ == 6 ~ "advanced"), 
+           levels = c("highSchool", "college", "advanced")
+         ),
+         marstat = factor(
+           ifelse(marstat == 1, "married", "unmarried"), 
+           levels = c("unmarried", "married")
+         ),
+         employ = factor(
+           case_when(employ %in% c("Full-time", "Part-time") ~ "employed",
+                     employ == "Student" ~ "student",
+                     employ == "Retired" ~ "retired",
+                     employ %in% c("Homemaker", "Permanently disabled",
+                                   "Unemployed", "Temporarily laid off") ~ "unemployed",
+                     TRUE ~ NA_character_), 
+           levels = c("unemployed", "student", "retired", "employed")
+         ),
+         religion = factor(
+           case_when(religpew_w5 %in% c(1, 2, 3, 4, 5, 6, 7, 8) ~ "religious",
+                     religpew_w5 %in% c(9, 10, 11) ~ "nonReligious",
+                     TRUE ~ NA_character_), 
+           levels = c("nonReligious", "religious")
+         )
+  )
 
-surveyData <- surveyData %>% 
-  select(identity, W5_PATA506, W5_PATA507,
-         votereg, birthyr, gender, educ,
-         faminc_new, ideo5) %>% 
-  rename(turnout = W5_PATA506,
-         voteChoice = W5_PATA507,
-         familyIncome = faminc_new) %>% 
-  mutate(turnout = case_when(turnout == 5 ~ 1,
-                             TRUE ~ 0),
-         voteChoice = case_when(voteChoice == 1 ~ 0,
-                                voteChoice == 2 ~ 1,
-                                TRUE ~ NA_real_),
-         gender = ifelse(gender == 1, 0, 1),
-         votereg = ifelse(votereg == 1, 1, 0),
-         familyIncome = ifelse(familyIncome == 97, NA, familyIncome)) %>% 
-  type.convert()
+allMergedData <- merge(surveyDataEdit, allSearchData, by = "identity")
+uniqueUsers <- allMergedData[!duplicated(allMergedData$identity), ]
 
-withoutDataSurvey <- merge(surveyData, withoutData, by = "identity")
-withDataSurvey <- merge(surveyData, withData, by = "identity")
+mean(as.numeric(as.character(uniqueUsers$fullURL))) # 63% have full URLs
 
-withoutDataSurvey <- withoutDataSurvey %>% 
-  select(-client_id, -client_key, -os_name,
-         -os_version, -device_type, -session_start_time,
-         -start_time_utc, -date, -time, - page_url,
-         -page_domain, -predecessor_url, -succesor_url,
-         -browser_vendor, -search_term, -Category, -page_duration, 
-         -identity)
+# logistic regression model
+index <- createDataPartition(uniqueUsers$fullURL, p = 0.7, 
+                             list = FALSE)
+trainData <- uniqueUsers[index, ]
+testData  <- uniqueUsers[-index, ]
 
-withDataSurvey <- withDataSurvey %>% 
-  select(-client_id, -client_key, -os_name,
-         -os_version, -device_type, -session_start_time,
-         -start_time_utc, -date, -time, - page_url,
-         -page_domain, -predecessor_url, -succesor_url,
-         -browser_vendor, -search_term, -Category, -page_duration,
-         -identity)
+model <- glm(fullURL ~ gender + race + educ + marstat + employ + religion + age,
+                    family = binomial,
+                    data = trainData)
 
-withoutDataSurveyTable <- sapply(withoutDataSurvey, mean, na.rm = TRUE)
-withDataSurveyTable <- sapply(withDataSurvey, mean, na.rm = TRUE)
+summary(model)
 
-summaryTable <- data.frame(withDataSurveyTable, withoutDataSurveyTable)
+preds <- model %>% predict(testData, type = "response")
+predictedClasses <- ifelse(preds > 0.5, 1, 0)
+y <- testData$fullURL
 
-colnames(summaryTable) <- c("With Full URLs", "Without Full URLs") 
+accuracy <- mean(predictedClasses == y, na.rm = TRUE)
+precision <- posPredValue(factor(predictedClasses), y, positive = "1")
+recall <- sensitivity(factor(predictedClasses), y, positive = "1")
+F1 <- (2 * precision * recall) / (precision + recall)
 
-summaryTable <- round(summaryTable, 2)
+resTable <- data.frame(accuracy, precision, recall, F1) %>% 
+  round(2) %>% 
+  kable() %>% 
+  kable_styling() %>% 
+  add_header_above(c("Logistic Regression - Full URLs" = 4))
 
-rownames(summaryTable) <- c("Turnout (0 no, 1 yes)", 
-                            "Vote 2018 (0 Rep, 1 Dem)",
-                            "Registered Voter (0 no, 1 yes)",
-                            "Birth Year",
-                            "Gender (0 male, 1 female)",
-                            "Education (from 1-High School to 6-Postgrad)",
-                            "Family income (from 1-under 10k to 16-over 500k)",
-                            "Ideology (from 1-very Liberal - 5-very Conservative)")
+modelOR <- exp(coef(model))
+modelConf <- exp(confint(model))
+modelP <- list(summary(model)$coefficients[ ,4])
 
-summaryTableKable <- summaryTable %>% 
+stargazer(model,
+          coef = list(modelOR),
+          ci = T,
+          ci.custom = list(modelConf),
+          p = c(modelP),
+          header = FALSE,
+          title = "Odds-ratios Model for Full URLs", 
+          type = "text")
+
+
+# descriptive stats 
+surveyDataDesc <- surveyData %>% 
+  select(identity, birthyr, gender, race, 
+         educ, marstat, employ, religpew_w5,
+         ideo5)
+
+allMergedDataDesc <- merge(surveyDataDesc, allSearchData, by = "identity")
+uniqueUsersDesc <- allMergedDataDesc[!duplicated(allMergedDataDesc$identity), ]
+
+table <- uniqueUsersDesc %>% 
+  group_by(fullURL) %>% 
+  add_count(fullURL) %>% 
+  mutate(Share = n/length(uniqueUsers$fullURL)) %>% 
+  select(fullURL, n, Share, birthyr, gender, race, 
+         educ, marstat, employ, religpew_w5, ideo5) %>% 
+  mutate(Age = 2018 - birthyr,
+         white = ifelse(race == 1, 1, 0),
+         hasDegree = ifelse(educ >= 4, 1, 0),
+         married = ifelse(marstat == 1, 1, 0),
+         fullTime = ifelse(employ == "Full-time", 1, 0),
+         religious = case_when(religpew_w5 %in% c(1, 2, 3, 4, 5, 6, 7, 8) ~ 1,
+                               TRUE ~ 0)) %>%
+  select(-birthyr, -educ, -race, -marstat, -employ, -religpew_w5) %>% 
+  summarise_if(is.numeric, mean, na.rm = TRUE) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  rename(Count = n, 
+         PercentWomen = gender,
+         PercentWhite = white,
+         PercentMarried = married,
+         PercentFullTime = fullTime,
+         PercentReligious = religious,
+         Ideology = ideo5) %>% 
+  select(fullURL, Count, Share, Age, PercentWomen, PercentWhite, PercentMarried,
+         PercentFullTime, hasDegree, PercentReligious, Ideology) %>% 
   kable() %>% 
   kable_styling()
