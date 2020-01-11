@@ -4,6 +4,9 @@ library(kableExtra)
 searchData <- search_df
 surveyData <- all_waves
 
+# dates of survey
+date <- surveyData %>% select(W5_starttime) # 12/20/2018 - 01/07/2019
+
 # dropping rows without search term
 searchData <- searchData %>% 
   filter(!is.na(search_term))
