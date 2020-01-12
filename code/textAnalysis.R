@@ -3,8 +3,8 @@ library(tidytext)
 library(textdata)
 library(sentimentr)
 
-beforeElection <- fullDataSet %>% 
-  filter(date <= "2018-11-07")
+#beforeElection <- fullDataSet %>% 
+#  filter(date <= "2018-11-07")
 
 # tokens
 searchTokens <- fullDataSet %>% 
@@ -20,6 +20,13 @@ searchTokens <- searchTokens %>%
 # most common queries
 mostCommon <- searchTokens %>% 
   count(word, sort = TRUE)
+
+mostCommonClean <- mostCommon %>% 
+  mutate(word = gsub("[[:punct:]]", " ", word),
+         hasNum = str_extract_all(word, "[[:digit:]]+"),
+         wordClean = ifelse(hasNum == "character(0)", word, NA)) %>% 
+  filter(!is.na(wordClean)) %>% 
+  select(-wordClean, -hasNum)
 
 # most common queries by partisanship
 partisanQueries <- searchTokens %>% 
@@ -244,5 +251,8 @@ sentimentWholePlotNon <- sentenceWholeParty %>%
        y = "Number of Users",
        title = "Sentiment Distribution: Non Voters")
 
-
+# keywords
+politicalWords <- c("vote", "voting", "register_to_vote", "voter_registration", "registration",
+                    "election", "midterm", "house_of_representatives", "congressional_candidate",
+                    "congress", "candidate", "campaign", "republican", "democrat", "democratic")
 
