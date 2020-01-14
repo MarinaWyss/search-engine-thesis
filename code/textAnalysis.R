@@ -2,9 +2,14 @@ library(tidyverse)
 library(tidytext)
 library(textdata)
 library(sentimentr)
+library(quanteda)
 
 #beforeElection <- fullDataSet %>% 
 #  filter(date <= "2018-11-07")
+
+##################################
+############# PREP ###############
+##################################
 
 # tokens
 searchTokens <- fullDataSet %>% 
@@ -15,18 +20,20 @@ searchTokens <- fullDataSet %>%
 
 searchTokens <- searchTokens %>%
   anti_join(get_stopwords()) %>% 
-  filter(word %ni% c("http", "https"))
-
-# most common queries
-mostCommon <- searchTokens %>% 
-  count(word, sort = TRUE)
-
-mostCommonClean <- mostCommon %>% 
+  filter(word %ni% c("http", "https")) %>% 
   mutate(word = gsub("[[:punct:]]", " ", word),
          hasNum = str_extract_all(word, "[[:digit:]]+"),
          wordClean = ifelse(hasNum == "character(0)", word, NA)) %>% 
   filter(!is.na(wordClean)) %>% 
   select(-wordClean, -hasNum)
+
+##################################
+########### KEYWORDS #############
+##################################
+
+# most common queries
+mostCommon <- searchTokens %>% 
+  count(word, sort = TRUE)
 
 # most common queries by partisanship
 partisanQueries <- searchTokens %>% 
@@ -62,6 +69,132 @@ partisanQueriesPlotNon <- partisanQueries %>%
        y = "Number of Searches",
        title = "Top 10 Query Terms: Non-Voters")
 
+##################################
+########## WORDSCORES ############
+##################################
+
+# turnout terms
+wsTokensTurnout <- fullDataSet %>% 
+  select(pmxid, turnout, date, search_term) %>% 
+  select(-date) %>% 
+  rename(text = search_term) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(text, collapse = " "),
+            turnout = min(turnout))
+
+wsCorpusTurnout <- corpus(wsTokensTurnout$text)
+docnames(wsCorpusTurnout) <- wsTokensTurnout$pmxid
+
+wsDFMTurnout <- dfm(wsCorpusTurnout, 
+                    remove_punct = TRUE, 
+                    remove_numbers = TRUE, 
+                    remove_symbols = TRUE,
+                    remove = c(stopwords("english"), 
+                               "http", "https"))
+
+wsDFMTurnout <- dfm_trim(wsDFMTurnout, min_docfreq = 2)
+
+wsModelTurnout <- textmodel_wordscores(wsDFMTurnout, 
+                                       wsTokensTurnout$turnout, 
+                                       smooth = 0.5)
+
+swTurnout <- sort(coef(wsModelTurnout))
+
+wsNonTerms <- head(swTurnout, 10)
+wsVoteTerms <- tail(swTurnout, 10)
+
+# party choice
+wsTokensParty <- fullDataSet %>% 
+  select(pmxid, voteChoice, date, search_term) %>% 
+  filter(voteChoice == 1 | voteChoice == 2) %>% 
+  mutate(voteChoice = ifelse(voteChoice == 1, 1, -1)) %>% 
+  select(-date) %>% 
+  rename(text = search_term) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(text, collapse = " "),
+            voteChoice = min(voteChoice))
+
+wsCorpusParty <- corpus(wsTokensParty$text)
+docnames(wsCorpusParty) <- wsTokensParty$pmxid
+
+wsDFMParty <- dfm(wsCorpusParty, 
+            remove_punct = TRUE, 
+            remove_numbers = TRUE, 
+            remove_symbols = TRUE,
+            remove = c(stopwords("english"), 
+                       "http", "https"))
+
+wsDFMParty <- dfm_trim(wsDFMParty, min_docfreq = 2)
+
+wsModelParty <- textmodel_wordscores(wsDFMParty, 
+                                     wsTokensParty$voteChoice, 
+                                     smooth = 0.5)
+
+swParty <- sort(coef(wsModelParty))
+
+wsDemTerms <- head(swParty, 10) # dems -1
+wsRepTerms <- tail(swParty, 10) # reps 1
+
+
+##################################
+###########  KEYNESS  ############
+##################################
+
+# turnout
+keynessTurnout <- fullDataSet %>% 
+  select(turnout, date, search_term) %>% 
+  select(-date) %>% 
+  rename(text = search_term) %>% 
+  group_by(turnout) %>% 
+  summarise(text = paste(text, collapse = " ")) %>% 
+  mutate(turnout = ifelse(turnout == 1, "Voters", "Non-Voters")) 
+
+keynessCorpusTurnout <- corpus(keynessTurnout$text)
+docnames(keynessCorpusTurnout) <- keynessTurnout$turnout
+docvars(keynessCorpusTurnout, "turnout") <- keynessTurnout$turnout
+
+keynessDFMTurnout <- dfm(keynessCorpusTurnout, 
+                       groups = "turnout",
+                       remove_punct = TRUE, 
+                       remove_numbers = TRUE, 
+                       remove_symbols = TRUE,
+                       remove = c(stopwords("english"), 
+                                  "http", "https"))
+
+keynessModelTurnout <- textstat_keyness(keynessDFMTurnout, target = "Voters")
+
+textplot_keyness(keynessModelTurnout) 
+
+# party choice
+keynessParty <- fullDataSet %>% 
+  select(voteChoice, date, search_term) %>% 
+  filter(voteChoice == 1 | voteChoice == 2) %>% 
+  select(-date) %>% 
+  rename(text = search_term) %>% 
+  group_by(voteChoice) %>% 
+  summarise(text = paste(text, collapse = " ")) %>% 
+  mutate(party = ifelse(voteChoice == 1, "Republican", "Democrat")) 
+  
+keynessCorpusParty <- corpus(keynessParty$text)
+docnames(keynessCorpusParty) <- keynessParty$party
+docvars(keynessCorpusParty, "party") <- keynessParty$party
+
+keynessDFMParty <- dfm(keynessCorpusParty, 
+                       groups = "party",
+                       remove_punct = TRUE, 
+                       remove_numbers = TRUE, 
+                       remove_symbols = TRUE,
+                       remove = c(stopwords("english"), 
+                             "http", "https"))
+
+keynessModelParty <- textstat_keyness(keynessDFMParty, target = "Republican")
+
+textplot_keyness(keynessModelParty) 
+
+
+##################################
+########### SENTIMENT ############
+##################################
 
 # sentiment binary
 bing <- get_sentiments("bing")
@@ -250,9 +383,4 @@ sentimentWholePlotNon <- sentenceWholeParty %>%
   labs(x = "Sentiment of all Queries",
        y = "Number of Users",
        title = "Sentiment Distribution: Non Voters")
-
-# keywords
-politicalWords <- c("vote", "voting", "register_to_vote", "voter_registration", "registration",
-                    "election", "midterm", "house_of_representatives", "congressional_candidate",
-                    "congress", "candidate", "campaign", "republican", "democrat", "democratic")
 
