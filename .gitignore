@@ -1,0 +1,5 @@
+
+code/.Rhistory
+*.pdf
+*.RData
+.DS_Store

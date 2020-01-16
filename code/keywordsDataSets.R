@@ -4,23 +4,9 @@ library(tidytext)
 # library(quanteda)
 
 # filter for time
-selectDates <- function(x){
+dropDuplicates <- function(x){
   x <- x[!duplicated(x$pmxid), ]
 }
-
-uniqueUsersFull <- fullDataSet[!duplicated(fullDataSet$pmxid), ]
-
-beforeElection <- fullDataSet %>% 
-  filter(date <= "2018-11-07")
-uniqueUsersBeforeElection <- selectDates(beforeElection)
-
-weekBeforeElection <- fullDataSet %>% 
-  filter(date <= "2018-11-06" & date >= "2018-10-30")
-uniqueUsersWeekBefore <- selectDates(weekBeforeElection)
-
-weekAfterElection <- fullDataSet %>% 
-  filter(date >= "2018-11-07" & date <= "2018-11-14")
-uniqueUsersWeekAfter <- selectDates(weekAfterElection)
 
 # search data prep
 searchTokens <- fullDataSet %>% 
@@ -41,30 +27,40 @@ searchTokens <- searchTokens %>%
 registerWords <- c("vote", "voting", "register", "voter", "registration",
                    "election", "midterm")
 
-searchedRegister <- searchTokens %>% 
+searchesFull <- searchTokens %>% 
   group_by(pmxid) %>% 
-  mutate(searched_register = ifelse(word %in% registerWords, 1, 0)) %>% 
-  summarise(num_register_searches = sum(searched_register))
+  mutate(register_word = ifelse(word %in% registerWords, 1, 0),
+         num_register_searches = sum(register_word),
+         searched_register = ifelse(num_register_searches >= 1, 1, 0))
 
-registerDataSetFull <- uniqueUsersFull %>% 
-  merge(searchedRegister, by = "pmxid") %>% 
-  mutate(searched_register = ifelse(num_register_searches >= 1, 1, 0)) %>% 
-  select(pmxid, turnout, voteChoice, searched_register, num_register_searches)
+searchesBefore <- searchTokens %>% 
+  filter(date <= "2018-11-07") %>% 
+  group_by(pmxid) %>% 
+  mutate(register_word = ifelse(word %in% registerWords, 1, 0),
+         num_register_searches = sum(register_word),
+         searched_register = ifelse(num_register_searches >= 1, 1, 0)) 
 
-registerDataSetBefore <- uniqueUsersBeforeElection %>% 
-  merge(searchedRegister, by = "pmxid") %>% 
-  mutate(searched_register = ifelse(num_register_searches >= 1, 1, 0)) %>% 
-  select(pmxid, turnout, voteChoice, searched_register, num_register_searches)
+searchesWeekBefore <- searchTokens %>% 
+  filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
+  group_by(pmxid) %>% 
+  mutate(register_word = ifelse(word %in% registerWords, 1, 0),
+         num_register_searches = sum(register_word),
+         searched_register = ifelse(num_register_searches >= 1, 1, 0)) 
 
-registerDataSetWeekBefore <- uniqueUsersWeekBefore %>% 
-  merge(searchedRegister, by = "pmxid") %>% 
-  mutate(searched_register = ifelse(num_register_searches >= 1, 1, 0)) %>% 
-  select(pmxid, turnout, voteChoice, searched_register, num_register_searches)
+searchesWeekAfter <- searchTokens %>% 
+  filter(date >= "2018-11-07" & date <= "2018-11-14") %>% 
+  group_by(pmxid) %>% 
+  mutate(register_word = ifelse(word %in% registerWords, 1, 0),
+         num_register_searches = sum(register_word),
+         searched_register = ifelse(num_register_searches >= 1, 1, 0))
 
-registerDataSetWeekAfter <- uniqueUsersWeekAfter %>% 
-  merge(searchedRegister, by = "pmxid") %>% 
-  mutate(searched_register = ifelse(num_register_searches >= 1, 1, 0)) %>% 
-  select(pmxid, turnout, voteChoice, searched_register, num_register_searches)
+# candidates
+candidates <- read.csv("candidateInfo.csv")
+states <- read.csv("stateMapping.csv", header = FALSE)
+colnames(states) <- c("state", "stateName")
+
+fullDataSetT <- fullDataSet %>% 
+  left_join(fullDataSet, states, by = "state")
 
 
 # political keywords
