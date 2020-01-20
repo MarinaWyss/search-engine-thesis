@@ -154,3 +154,52 @@ searchLengthParty <- searchLengthUser %>%
 searchLengthPlotParty <- ggplot(data = searchLengthParty, 
                                 aes(x = voteChoice, y = mean)) +
   geom_bar(stat = "identity", aes(fill = voteChoice)) 
+
+# searched for register keywords - turnout
+registerDataSetFull %>% 
+  mutate(turnout = ifelse(turnout == 1, "voter", "non-voter")) %>% 
+  group_by(turnout) %>% 
+  summarize(mean_searches = mean(num_register_searches)) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Mean Number of Registration-Related Searches" = 2))
+
+turnoutRegister <- registerDataSetFull %>% 
+  mutate(turnout = ifelse(turnout == 1, "voter", "non-voter"),
+         searched_register = ifelse(searched_register == 1, "searched_for_term", "no_searches"))
+
+table(turnoutRegister$searched_register, turnoutRegister$turnout) %>% 
+  prop.table(2) %>% 
+  round(3) %>%
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Turnout and Registration-Related Keywords" = 3)) %>% 
+  footnote("Column Percent")
+
+# searched for register keywords - vote choice
+registerDataSetFull %>% 
+  filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
+  mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
+                                voteChoice == 2 ~ "Democrat")) %>% 
+  group_by(voteChoice) %>% 
+  summarize(mean_searches = mean(num_register_searches)) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Mean Number of Registration-Related Searches" = 2))
+
+voteChoiceRegister <- registerDataSetFull %>% 
+  filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
+  mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
+                                voteChoice == 2 ~ "Democrat"),
+         searched_register = ifelse(searched_register == 1, 
+                                    "searched_for_term", "no_searches"))
+  
+table(voteChoiceRegister$searched_register, voteChoiceRegister$voteChoice) %>% 
+  prop.table(2) %>% 
+  round(3) %>%
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Vote Choice and Registration-Related Keywords" = 3)) %>% 
+  footnote("Column Percent")
+
+
