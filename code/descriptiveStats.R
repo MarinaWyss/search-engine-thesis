@@ -156,15 +156,17 @@ searchLengthPlotParty <- ggplot(data = searchLengthParty,
   geom_bar(stat = "identity", aes(fill = voteChoice)) 
 
 # searched for register keywords - turnout
-registerDataSetFull %>% 
+fullSearchesJoined %>% 
+  filter(!is.na(turnout)) %>% 
   mutate(turnout = ifelse(turnout == 1, "voter", "non-voter")) %>% 
   group_by(turnout) %>% 
-  summarize(mean_searches = mean(num_register_searches)) %>% 
+  summarize(mean_searches = mean(num_register_searches, na.rm = TRUE)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
   kable() %>%  
   kable_styling() %>% 
   add_header_above(c("Search Behavior: Mean Number of Registration-Related Searches" = 2))
 
-turnoutRegister <- registerDataSetFull %>% 
+turnoutRegister <- fullSearchesJoined %>% 
   mutate(turnout = ifelse(turnout == 1, "voter", "non-voter"),
          searched_register = ifelse(searched_register == 1, "searched_for_term", "no_searches"))
 
@@ -177,17 +179,18 @@ table(turnoutRegister$searched_register, turnoutRegister$turnout) %>%
   footnote("Column Percent")
 
 # searched for register keywords - vote choice
-registerDataSetFull %>% 
+fullSearchesJoined %>% 
   filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
   mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
                                 voteChoice == 2 ~ "Democrat")) %>% 
   group_by(voteChoice) %>% 
   summarize(mean_searches = mean(num_register_searches)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
   kable() %>%  
   kable_styling() %>% 
   add_header_above(c("Search Behavior: Mean Number of Registration-Related Searches" = 2))
 
-voteChoiceRegister <- registerDataSetFull %>% 
+voteChoiceRegister <- fullSearchesJoined %>% 
   filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
   mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
                                 voteChoice == 2 ~ "Democrat"),
@@ -203,3 +206,117 @@ table(voteChoiceRegister$searched_register, voteChoiceRegister$voteChoice) %>%
   footnote("Column Percent")
 
 
+# searched for candidate - turnout
+fullSearchesJoined %>% 
+  filter(!is.na(turnout)) %>% 
+  mutate(turnout = ifelse(turnout == 1, "voter", "non-voter")) %>% 
+  group_by(turnout) %>% 
+  summarize(dem_searches = mean(searched_dem_candidate, na.rm = TRUE),
+            rep_searches = mean(searched_rep_candidate, na.rm = TRUE)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Proportion Who Searched For Candidates" = 3))
+
+sum(fullSearchesJoined$searched_dem_candidate, na.rm = TRUE) # 30
+sum(fullSearchesJoined$searched_rep_candidate, na.rm = TRUE) # 30
+
+
+# searched for candidate - vote choice
+fullSearchesJoined %>% 
+  filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
+  mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
+                                voteChoice == 2 ~ "Democrat")) %>% 
+  group_by(voteChoice) %>% 
+  summarize(dem_searches = mean(searched_dem_candidate, na.rm = TRUE),
+            rep_searches = mean(searched_rep_candidate, na.rm = TRUE)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Proportion Who Searched For Candidates" = 3))
+
+
+# searched for politician Rep/Dem - turnout
+fullSearchesJoined %>% 
+  filter(!is.na(turnout)) %>% 
+  mutate(turnout = ifelse(turnout == 1, "voter", "non-voter")) %>% 
+  group_by(turnout) %>% 
+  summarize(mean_dem_searches = mean(num_dem_searches, na.rm = TRUE),
+            prop_searched_dem = mean(searched_dem, na.rm = TRUE),
+            mean_rep_searches = mean(num_rep_searches, na.rm = TRUE),
+            prop_searched_rep = mean(searched_rep, na.rm = TRUE)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Dem/Rep Searches" = 5)) 
+
+sum(fullSearchesJoined$searched_dem, na.rm = TRUE) # 135
+sum(fullSearchesJoined$searched_rep, na.rm = TRUE) # 147
+
+# searched for politician Rep/Dem - vote choice
+fullSearchesJoined %>% 
+  filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
+  mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
+                                voteChoice == 2 ~ "Democrat")) %>% 
+  group_by(voteChoice) %>% 
+  summarize(mean_dem_searches = mean(num_dem_searches, na.rm = TRUE),
+            prop_searched_dem = mean(searched_dem, na.rm = TRUE),
+            mean_rep_searches = mean(num_rep_searches, na.rm = TRUE),
+            prop_searched_rep = mean(searched_rep, na.rm = TRUE)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Dem/Rep Searches" = 5)) 
+
+
+# searched for political keywords - turnout
+fullSearchesJoined %>% 
+  filter(!is.na(turnout)) %>% 
+  mutate(turnout = ifelse(turnout == 1, "voter", "non-voter")) %>% 
+  group_by(turnout) %>% 
+  summarize(mean_searches = mean(num_political_searches, 
+                                 na.rm = TRUE)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Mean Number of Non-Partisan Political Searches" = 2))
+
+turnoutPolitical <- fullSearchesJoined %>% 
+  mutate(turnout = ifelse(turnout == 1, "voter", "non-voter"),
+         searched_politics = ifelse(searched_politics == 1, "searched_for_term", "no_searches"))
+
+table(turnoutPolitical$searched_politics, turnoutPolitical$turnout) %>% 
+  prop.table(2) %>% 
+  round(3) %>%
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Turnout and Non-Partisan Political Searches" = 3)) %>% 
+  footnote("Column Percent")
+
+# searched for political keywords - vote choice
+fullSearchesJoined %>% 
+  filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
+  mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
+                                voteChoice == 2 ~ "Democrat")) %>% 
+  group_by(voteChoice) %>% 
+  summarize(mean_searches = mean(num_political_searches, 
+                                 na.rm = TRUE)) %>% 
+  mutate_if(is.numeric, round, 2) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Mean Number of Non-Partisan Political Searches" = 2))
+
+voteChoicePolitical <- fullSearchesJoined %>% 
+  filter(!is.na(voteChoice) & voteChoice != 4 & voteChoice != 3) %>% 
+  mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
+                                voteChoice == 2 ~ "Democrat"),
+         searched_politics = ifelse(searched_politics == 1, 
+                                    "searched_for_term", "no_searches"))
+
+table(voteChoicePolitical$searched_politics, voteChoicePolitical$voteChoice) %>% 
+  prop.table(2) %>% 
+  round(3) %>%
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Vote Choice and Non-Partisan Political Searches" = 3)) %>% 
+  footnote("Column Percent")
