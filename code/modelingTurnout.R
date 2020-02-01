@@ -27,9 +27,6 @@ trainDataDFM <- dfUp[indexDFM, ]
 testDataDFM  <- dfUp[-indexDFM, ]
 
 
-
-
-
 #########################
 ######## searches #######
 #########################
