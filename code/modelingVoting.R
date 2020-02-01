@@ -1,7 +1,6 @@
 library(tidyverse)
 library(xgboost)
 library(caret)
-library(recipes)
 
 set.seed(2342)
 
@@ -33,24 +32,25 @@ testDataDFM  <- dfUp[-indexDFM, ]
 #########################
 
 searches <- beforeSearchesJoined %>% 
-  select(-date, -word, -pmxid, -voteChoice) %>% 
-  filter(!is.na(turnout))
+  select(-date, -word, -pmxid, -turnout) %>% 
+  filter(!is.na(voteChoice) & voteChoice %in% c(1, 2)) %>% 
+  mutate(voteChoice = ifelse(voteChoice == 2, 0, 1))
 
 # upsampling the data 
 searchesUp <- upSample(x = searches,
-                           y = as.factor(searches$turnout)) %>% 
+                           y = as.factor(searches$voteChoice)) %>% 
   select(-Class)
 
 # split data into training and test and prep
-indexSearches <- createDataPartition(searchesUp$turnout, p = 0.7, 
+indexSearches <- createDataPartition(searchesUp$voteChoice, p = 0.7, 
                                          list = FALSE)
 
 trainDataSearches <- searchesUp[indexSearches, ]
 testDataSearches  <- searchesUp[-indexSearches, ]
 
 X <- as.matrix(trainDataSearches[setdiff(names(trainDataSearches), 
-                                             "turnout")])
-Y <- trainDataSearches$turnout
+                                             "voteChoice")])
+Y <- trainDataSearches$voteChoice
 
 # hyperparameters
 hyper_grid <- expand.grid(
@@ -108,7 +108,7 @@ xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 4,
+  nrounds = 44,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -121,7 +121,7 @@ preds <- predict(xgbTrain, as.matrix(testDataSearches[-1]))
 preds <- as.integer(preds > 0.5)
 
 # metrics - real bad lol
-testY <- testDataSearches$turnout
+testY <- testDataSearches$voteChoice
 
 accuracy <- 1 - (as.numeric(sum(preds != testY))/
                    length(testY))
@@ -136,30 +136,32 @@ F1 <- (2 * precision * recall) / (precision + recall)
 ######## behavior #######
 #########################
 behavior <- searchBehaviorBefore %>% 
-  select(-pmxid, -voteChoice) %>% 
-  filter(!is.na(turnout)) %>% 
+  select(-pmxid, -turnout) %>% 
+  filter(!is.na(voteChoice) & voteChoice %in% c(1, 2)) %>% 
   mutate(google = ifelse(search_engine == "Google", 1, 0),
          bing = ifelse(search_engine == "Bing", 1, 0),
          duck = ifelse(search_engine == "DuckDuckGo", 1, 0),
          yahoo = ifelse(search_engine == "Yahoo", 1, 0),
-         other = ifelse(search_engine == "Other", 1, 0)) %>% 
+         other = ifelse(search_engine == "Other", 1, 0),
+         voteChoice = ifelse(voteChoice == 2, 0, 1)) %>% 
   select(-search_engine)
 
 # upsampling the data 
 behaviorUp <- upSample(x = behavior,
-                           y = as.factor(behavior$turnout)) %>% 
+                           y = as.factor(behavior$voteChoice)) %>% 
   select(-Class)
 
 # split data into training and test and prep
-indexBehavior <- createDataPartition(behaviorUp$turnout, p = 0.7, 
-                                         list = FALSE)
+indexBehavior <- createDataPartition(behaviorUp$voteChoice, 
+                                     p = 0.7, 
+                                     list = FALSE)
 
 trainDataBehavior <- behaviorUp[indexBehavior, ]
 testDataBehavior  <- behaviorUp[-indexBehavior, ]
 
 X <- as.matrix(trainDataBehavior[setdiff(names(trainDataBehavior), 
-                                             "turnout")])
-Y <- trainDataBehavior$turnout
+                                             "voteChoice")])
+Y <- trainDataBehavior$voteChoice
 
 # hyperparameters
 hyper_grid <- expand.grid(
@@ -217,7 +219,7 @@ xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 560,
+  nrounds = 56,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -230,7 +232,7 @@ preds <- predict(xgbTrain, as.matrix(testDataBehavior[-1]))
 preds <- as.integer(preds > 0.5)
 
 # metrics - medium bad
-testY <- testDataBehavior$turnout
+testY <- testDataBehavior$voteChoice
 
 accuracy <- 1 - (as.numeric(sum(preds != testY))/
                    length(testY))
@@ -248,28 +250,30 @@ allData <- merge(beforeSearchesJoined[c(-2, -3)], searchBehaviorBefore,
                  by = "pmxid")
 
 allData <- allData %>% 
-  filter(!is.na(turnout)) %>% 
+  filter(!is.na(voteChoice) & voteChoice %in% c(1, 2)) %>% 
   mutate(google = ifelse(search_engine == "Google", 1, 0),
          bing = ifelse(search_engine == "Bing", 1, 0),
          duck = ifelse(search_engine == "DuckDuckGo", 1, 0),
          yahoo = ifelse(search_engine == "Yahoo", 1, 0),
-         other = ifelse(search_engine == "Other", 1, 0)) %>% 
-  select(-search_engine, -date, -word, -pmxid, -voteChoice) 
+         other = ifelse(search_engine == "Other", 1, 0),
+         voteChoice = ifelse(voteChoice == 2, 0, 1)) %>% 
+  select(-search_engine, -date, -word, -pmxid, -turnout) 
 
 allDataUp <- upSample(x = allData,
-                       y = as.factor(allData$turnout)) %>% 
+                       y = as.factor(allData$voteChoice)) %>% 
   select(-Class)
 
 # split data into training and test and prep
-indexAll <- createDataPartition(allDataUp$turnout, p = 0.7, 
-                                     list = FALSE)
+indexAll <- createDataPartition(allDataUp$voteChoice, 
+                                p = 0.7, 
+                                list = FALSE)
 
 trainDataAll <- allDataUp[indexAll, ]
 testDataAll  <- allDataUp[-indexAll, ]
 
 X <- as.matrix(trainDataAll[setdiff(names(trainDataAll), 
-                                         "turnout")])
-Y <- trainDataAll$turnout
+                                         "voteChoice")])
+Y <- trainDataAll$voteChoice
 
 # hyperparameters
 hyper_grid <- expand.grid(
@@ -327,7 +331,7 @@ xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 405,
+  nrounds = 172,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -336,9 +340,9 @@ xgbTrain <- xgboost(
 vip::vip(xgbTrain) 
 
 # prediction 
-testY <- testDataAll$turnout
+testY <- testDataAll$voteChoice
 testDataAll <- testDataAll %>%
-  select(-turnout)
+  select(-voteChoice)
 
 preds <- predict(xgbTrain, as.matrix(testDataAll))
 preds <- as.integer(preds > 0.5)

@@ -9,20 +9,18 @@ dropDuplicates <- function(x){
 }
 
 # search data prep
-searchTokensSingle <- fullDataSet %>% 
-  select(pmxid, turnout, voteChoice, date, search_term) %>% 
-  unnest_tokens(word, search_term) 
-
 '%ni%' <- Negate('%in%')
 
-searchTokensSingle <- searchTokensSingle %>%
+searchTokensSingle <- fullDataSet %>% 
+  select(pmxid, turnout, voteChoice, date, search_term) %>% 
+  unnest_tokens(word, search_term) %>% 
   anti_join(get_stopwords()) %>% 
   filter(word %ni% c("http", "https")) %>% 
-  mutate(word = gsub("[[:punct:]]", " ", word),
-         hasNum = str_extract_all(word, "[[:digit:]]+"),
+  mutate(hasNum = str_extract_all(word, "[[:digit:]]+"),
          wordClean = ifelse(hasNum == "character(0)", word, NA)) %>% 
   filter(!is.na(wordClean)) %>% 
-  select(-wordClean, -hasNum)
+  select(-wordClean, -hasNum) 
+
 
 # vote/register and political keywords
 registerWords <- c("vote", "voting", "register", "voter", "registration",
@@ -236,21 +234,25 @@ weekBeforeSearchesJoined <- merge(weekBeforeSearchesJoined, politiciansWeekBefor
                                   all = TRUE)
 
 # all search terms
-fullText <- fullDataSet %>% 
+fullText <- searchTokensSingle %>% 
+  mutate(stemmed = char_wordstem(word)) %>%
+  filter(nchar(stemmed) >= 2) %>% 
   group_by(pmxid) %>% 
-  summarise(text = paste(search_term, collapse =" "),
+  summarise(text = paste(stemmed, collapse =" "),
             turnout = min(turnout),
             voteChoice = min(voteChoice)) %>% 
-  mutate(text = gsub("[[:punct:]]", " ", text))
+  mutate(text = gsub("[[:punct:]]", " ", text)) 
 
 fullCorpus <- corpus(fullText)
 fullDFM <- dfm(fullCorpus)
 fullDFM <- dfm_trim(fullDFM, min_termfreq = 3)
 
-beforeText <- fullDataSet %>% 
+beforeText <- searchTokensSingle %>% 
   filter(date <= "2018-11-07") %>% 
+  mutate(stemmed = char_wordstem(word)) %>% 
+  filter(nchar(stemmed) >= 2) %>% 
   group_by(pmxid) %>% 
-  summarise(text = paste(search_term, collapse =" "),
+  summarise(text = paste(stemmed, collapse =" "),
             turnout = min(turnout),
             voteChoice = min(voteChoice)) %>% 
   mutate(text = gsub("[[:punct:]]", " ", text))
@@ -259,10 +261,12 @@ beforeCorpus <- corpus(beforeText)
 beforeDFM <- dfm(beforeCorpus)
 beforeDFM <- dfm_trim(beforeDFM, min_termfreq = 3)
 
-weekBeforeText <- fullDataSet %>% 
+weekBeforeText <- searchTokensSingle %>% 
   filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
+  mutate(stemmed = char_wordstem(word)) %>% 
+  filter(nchar(stemmed) >= 2) %>% 
   group_by(pmxid) %>% 
-  summarise(text = paste(search_term, collapse =" "),
+  summarise(text = paste(stemmed, collapse =" "),
             turnout = min(turnout),
             voteChoice = min(voteChoice)) %>% 
   mutate(text = gsub("[[:punct:]]", " ", text))
@@ -271,4 +275,38 @@ weekBeforeCorpus <- corpus(weekBeforeText)
 weekBeforeDFM <- dfm(weekBeforeCorpus)
 weekBeforeDFM <- dfm_trim(weekBeforeDFM, min_termfreq = 3)
 
+# top 1000 search terms
+top1000Before <- searchTokensSingle %>% 
+  filter(date <= "2018-11-07") %>% 
+  mutate(stemmed = char_wordstem(word)) %>% 
+  filter(nchar(stemmed) >= 2) %>% 
+  group_by(stemmed) %>% 
+  mutate(num_searches = n()) %>% 
+  filter(num_searches > 100) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(stemmed, collapse =" "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice)) %>% 
+  mutate(text = gsub("[[:punct:]]", " ", text))
+
+top1000BeforeCorpus <- corpus(top1000Before)
+top1000BeforeDFM <- dfm(top1000BeforeCorpus)
+
+top1000WeekBefore <- searchTokensSingle %>% 
+  filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
+  mutate(stemmed = char_wordstem(word)) %>% 
+  filter(nchar(stemmed) >= 2) %>% 
+  group_by(stemmed) %>% 
+  mutate(num_searches = n()) %>% 
+  filter(num_searches > 8) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(stemmed, collapse =" "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice)) %>% 
+  mutate(text = gsub("[[:punct:]]", " ", text))
+
+top1000WeekBeforeCorpus <- corpus(top1000WeekBefore)
+top1000WeekBeforeDFM <- dfm(top1000WeekBeforeCorpus)
+
+length(unique(top1000WeekBefore$stemmed))
 
