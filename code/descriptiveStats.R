@@ -1,5 +1,6 @@
 library(tidyverse)
 library(kableExtra)
+library(chron)
 
 length(unique(fullDataSet$pmxid)) # 708
 uniqueUsers <- fullDataSet[!duplicated(fullDataSet$pmxid), ]
@@ -154,6 +155,27 @@ searchLengthParty <- searchLengthUser %>%
 searchLengthPlotParty <- ggplot(data = searchLengthParty, 
                                 aes(x = voteChoice, y = mean)) +
   geom_bar(stat = "identity", aes(fill = voteChoice)) 
+
+
+# time of day
+timeVote <- fullDataSet %>% 
+  filter(!is.na(voteChoice) & voteChoice %in% c(1, 2)) %>% 
+  mutate(voteChoice = ifelse(voteChoice == 2, "Democrat", "Republican")) %>% 
+  group_by(voteChoice) %>% 
+  summarize(timeOfDay = mean(times(time))) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Average time of day for queries" = 2))
+
+timeTurnout <- fullDataSet %>% 
+  filter(!is.na(turnout)) %>% 
+  mutate(turnout = ifelse(turnout == 1, "voter", "non-voter")) %>% 
+  group_by(turnout) %>% 
+  summarize(timeOfDay = mean(times(time))) %>% 
+  kable() %>%  
+  kable_styling() %>% 
+  add_header_above(c("Search Behavior: Average time of day for queries" = 2))
+
 
 # searched for register keywords - turnout
 fullSearchesJoined %>% 

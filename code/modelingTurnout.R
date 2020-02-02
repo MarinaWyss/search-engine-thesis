@@ -146,7 +146,7 @@ behavior <- searchBehaviorBefore %>%
 
 # upsampling the data 
 behaviorUp <- upSample(x = behavior,
-                           y = as.factor(behavior$turnout)) %>% 
+                       y = as.factor(behavior$turnout)) %>% 
   select(-Class)
 
 # split data into training and test and prep
@@ -158,6 +158,7 @@ testDataBehavior  <- behaviorUp[-indexBehavior, ]
 
 X <- as.matrix(trainDataBehavior[setdiff(names(trainDataBehavior), 
                                              "turnout")])
+
 Y <- trainDataBehavior$turnout
 
 # hyperparameters

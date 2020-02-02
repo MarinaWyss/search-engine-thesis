@@ -1,5 +1,6 @@
 library(tidyverse)
 library(sentimentr)
+library(chron)
 
 # duplicates function
 dropDuplicates <- function(x){
@@ -36,38 +37,60 @@ usersTextWeekBefore$sentiment <- sentimentWeekBefore$sentiment
 # search behavior
 behaviorDataSetFull <- fullDataSet %>% 
   group_by(pmxid) %>% 
-  mutate(mean_search_length = mean(nchar(search_term)),
-         mean_searches_day = mean(
-           length(search_term)
-           /length(unique(fullDataSet$date))
+  summarize(turnout = min(turnout),
+            voteChoice = min(voteChoice),
+            search_engine = min(search_engine),
+            time_of_day = mean(times(time)),
+            mean_search_length = mean(nchar(search_term)),
+            mean_searches_day = mean(
+              length(search_term)
+              /length(unique(fullDataSet$date))
              )) %>% 
-  select(pmxid, turnout, voteChoice, search_engine, mean_search_length,
-         mean_searches_day) %>% 
-  dropDuplicates()
+  mutate(time_reg = as.numeric(
+    (strptime(time_of_day, format = "%H:%M:%S") - 
+      strptime("12:00:00", format = "%H:%M:%S")) 
+      / 60)
+    ) %>% 
+  select(-time_of_day)
 
 behaviorDataSetBefore <- fullDataSet %>% 
   filter(date <= "2018-11-07") %>% 
   group_by(pmxid) %>% 
-  mutate(mean_search_length = mean(nchar(search_term)),
-         mean_searches_day = mean(
-           length(search_term)
-           /length(unique(fullDataSet$date))
-         )) %>% 
-  select(pmxid, turnout, voteChoice, search_engine, mean_search_length,
-         mean_searches_day) %>% 
-  dropDuplicates()
+  summarize(turnout = min(turnout),
+            voteChoice = min(voteChoice),
+            search_engine = min(search_engine),
+            time_of_day = mean(times(time)),
+            mean_search_length = mean(nchar(search_term)),
+            mean_searches_day = mean(
+              length(search_term)
+              /length(unique(fullDataSet$date))
+            )) %>% 
+  mutate(time_reg = as.numeric(
+    (strptime(time_of_day, format = "%H:%M:%S") - 
+      strptime("12:00:00", format = "%H:%M:%S"))
+    / 60 )
+  ) %>% 
+  select(-time_of_day)
 
 behaviorDataSetWeekBefore <- fullDataSet %>% 
   filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
   group_by(pmxid) %>% 
-  mutate(mean_search_length = mean(nchar(search_term)),
-         mean_searches_day = mean(
-           length(search_term)
-           /length(unique(fullDataSet$date))
-         )) %>% 
-  select(pmxid, turnout, voteChoice, search_engine, mean_search_length,
-         mean_searches_day) %>% 
-  dropDuplicates()
+  summarize(turnout = min(turnout),
+            voteChoice = min(voteChoice),
+            search_engine = min(search_engine),
+            time_of_day = mean(times(time)),
+            mean_search_length = mean(nchar(search_term)),
+            mean_searches_day = mean(
+              length(search_term)
+              /length(unique(fullDataSet$date))
+            )) %>% 
+  mutate(time_reg = as.numeric(
+    strptime(time_of_day, format = "%H:%M:%S") - 
+           strptime("12:00:00", format = "%H:%M:%S"))
+    ) %>% 
+  select(-time_of_day)
+
+str(behaviorDataSetWeekBefore)
 
 # merging
 searchBehaviorFull <- merge(x = behaviorDataSetFull, 
@@ -84,3 +107,6 @@ searchBehaviorWeekBefore <- merge(x = behaviorDataSetWeekBefore,
                             y = usersTextWeekBefore[ , c("pmxid", "sentiment")], 
                             by = "pmxid",
                             all = TRUE)
+
+
+
