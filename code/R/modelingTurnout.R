@@ -1,6 +1,7 @@
 library(tidyverse)
 library(xgboost)
 library(caret)
+library(lme4)
 
 set.seed(2342)
 
@@ -352,5 +353,23 @@ recall <- sensitivity(as.factor(preds), as.factor(testY),
                       positive = "1")
 F1 <- (2 * precision * recall) / (precision + recall)
 
+#########################
+##### behavior long #####
+#########################
+data <- behaviorLong %>% 
+  mutate(time_reg = scale(time_reg),
+         search_length = scale(search_length),
+         sentiment = scale(sentiment),
+         turnout = factor(turnout))
+  
+dataDown <- downSample(x = data,
+                       y = as.factor(data$turnout)) %>% 
+  dplyr::select(-Class)
+
+behaviorLongModel <- glmer(
+  turnout ~ 
+    time_reg + search_engine + search_length + sentiment + (1 | pmxid),
+  data = dataDown,
+  family = binomial(link = "logit")) 
 
 

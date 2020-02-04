@@ -2,6 +2,29 @@ library(tidyverse)
 library(sentimentr)
 library(chron)
 
+### 'longitudinal' style ###
+sentimentLong <- fullDataSet %>% 
+  filter(date <= "2018-11-07") %>% 
+  mutate(search_term = gsub("[[:punct:]]", "", search_term)) %>% 
+  select(pmxid, date, search_term)
+
+sentences <- get_sentences(sentimentLong$search_term)
+sentiment <- sentiment(sentences)
+
+behaviorLong <- fullDataSet %>% 
+  filter(date <= "2018-11-07") %>% 
+  mutate(time_reg = as.numeric(
+    (strptime(time, format = "%H:%M:%S") - 
+       strptime("12:00:00", format = "%H:%M:%S")) 
+    / 60 ),
+    search_length = nchar(search_term)) %>% 
+  select(pmxid, date, turnout, voteChoice, time_reg, 
+         search_engine, search_length)
+
+behaviorLong$sentiment <- sentiment$sentiment
+
+### by pmxid ###
+
 # duplicates function
 dropDuplicates <- function(x){
   x <- x[!duplicated(x$pmxid), ]
