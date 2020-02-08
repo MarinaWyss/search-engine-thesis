@@ -5,7 +5,6 @@ library(lme4)
 
 set.seed(2342)
 
-
 #########################
 ########## DFM ##########
 #########################
@@ -137,13 +136,7 @@ F1 <- (2 * precision * recall) / (precision + recall)
 #########################
 behavior <- searchBehaviorBefore %>% 
   select(-pmxid, -voteChoice) %>% 
-  filter(!is.na(turnout)) %>% 
-  mutate(google = ifelse(search_engine == "Google", 1, 0),
-         bing = ifelse(search_engine == "Bing", 1, 0),
-         duck = ifelse(search_engine == "DuckDuckGo", 1, 0),
-         yahoo = ifelse(search_engine == "Yahoo", 1, 0),
-         other = ifelse(search_engine == "Other", 1, 0)) %>% 
-  select(-search_engine)
+  filter(!is.na(turnout)) 
 
 # upsampling the data 
 behaviorUp <- upSample(x = behavior,
@@ -250,12 +243,7 @@ allData <- merge(beforeSearchesJoined[c(-2, -3)], searchBehaviorBefore,
 
 allData <- allData %>% 
   filter(!is.na(turnout)) %>% 
-  mutate(google = ifelse(search_engine == "Google", 1, 0),
-         bing = ifelse(search_engine == "Bing", 1, 0),
-         duck = ifelse(search_engine == "DuckDuckGo", 1, 0),
-         yahoo = ifelse(search_engine == "Yahoo", 1, 0),
-         other = ifelse(search_engine == "Other", 1, 0)) %>% 
-  select(-search_engine, -date, -word, -pmxid, -voteChoice) 
+  select(-date, -word, -pmxid, -voteChoice) 
 
 allDataUp <- upSample(x = allData,
                        y = as.factor(allData$turnout)) %>% 
