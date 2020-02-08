@@ -222,7 +222,7 @@ fullSearchesJoined <- merge(fullSearches, candidateStateFull,
 fullSearchesJoined <- merge(fullSearchesJoined, politiciansFull, 
                             by = "pmxid",
                             all = TRUE)%>% 
-  select(-date, -word, -pmxid)
+  select(-date, -word)
 
 beforeSearchesJoined <- merge(searchesBefore, candidateStateBefore, 
                               by = "pmxid",
@@ -231,7 +231,7 @@ beforeSearchesJoined <- merge(searchesBefore, candidateStateBefore,
 beforeSearchesJoined <- merge(beforeSearchesJoined, politiciansBefore, 
                               by = "pmxid",
                               all = TRUE)  %>% 
-  select(-date, -word, -pmxid)
+  select(-date, -word)
 
 weekBeforeSearchesJoined <- merge(searchesWeekBefore, candidateStateWeekBefore, 
                                   by = "pmxid",
@@ -240,7 +240,7 @@ weekBeforeSearchesJoined <- merge(searchesWeekBefore, candidateStateWeekBefore,
 weekBeforeSearchesJoined <- merge(weekBeforeSearchesJoined, politiciansWeekBefore, 
                                   by = "pmxid",
                                   all = TRUE) %>% 
-  select(-date, -word, -pmxid)
+  select(-date, -word)
 
 # saving
 save(fullSearchesJoined, file = "data/forModels/fullSearchesJoined.RData")
