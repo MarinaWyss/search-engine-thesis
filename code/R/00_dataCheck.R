@@ -3,6 +3,10 @@ library(kableExtra)
 library(caret)
 library(stargazer)
 
+# setwd()
+load("./data/raw/search_engine_requests.RData")
+load("./data/raw/usa_survey_clean.RData")
+
 searchData <- search_df
 surveyData <- all_waves
 

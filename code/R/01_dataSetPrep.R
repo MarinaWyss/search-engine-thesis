@@ -1,6 +1,9 @@
 library(tidyverse)
 
-# load data
+# setwd()
+load("./data/raw/search_engine_requests.RData")
+load("./data/raw/usa_survey_clean.RData")
+
 searchData <- search_df
 surveyData <- all_waves
 
@@ -36,7 +39,7 @@ searchData <- searchData %>%
   select(-page_domain)
 
 # save
-save(searchData, file = "preppedSearchData.RData")
+save(searchData, file = "./data/preppedSearchData.RData")
 
 #### SURVEY DATA ####
 
@@ -66,22 +69,14 @@ surveyData <- surveyData %>%
          familyIncome = ifelse(familyIncome == 97, NA, familyIncome))
 
 # save
-save(surveyData, file = "preppedSurveyData.RData")
+save(surveyData, file = "./data/preppedSurveyData.RData")
 
-#### EXTERNAL DATA ####
-candidateInfo <- read.csv("candidateInfo.csv")
-
-registrationDeadlines <- read.csv("registrationDeadlines.csv")
-registrationDeadlines <- registrationDeadlines %>% 
-  mutate(deadlineDate = as.Date("2018-11-06") - inPersonDeadline)
 
 #### MERGE #### 
-# doesn't yet include external data
 fullDataSet <- inner_join(surveyData, searchData)
-## length(unique(fullDataSet$pmxid)) - 708 unique users
 
 # save
-save(fullDataSet, file = "preppedFullData.RData")
+save(fullDataSet, file = "./data/preppedFullData.RData")
 
 
 

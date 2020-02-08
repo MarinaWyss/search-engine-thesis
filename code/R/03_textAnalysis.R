@@ -4,8 +4,8 @@ library(textdata)
 library(sentimentr)
 library(quanteda)
 
-#beforeElection <- fullDataSet %>% 
-#  filter(date <= "2018-11-07")
+# setwd()
+load("./data/preppedFullData.RData")
 
 ##################################
 ############# PREP ###############

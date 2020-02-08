@@ -2,6 +2,10 @@ library(tidyverse)
 library(kableExtra)
 library(chron)
 
+# setwd()
+load("./data/preppedFullData.RData")
+load("./data/forModels/fullSearchesJoined.RData")
+
 length(unique(fullDataSet$pmxid)) # 708
 uniqueUsers <- fullDataSet[!duplicated(fullDataSet$pmxid), ]
 

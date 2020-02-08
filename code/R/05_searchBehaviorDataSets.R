@@ -2,6 +2,9 @@ library(tidyverse)
 library(sentimentr)
 library(chron)
 
+# setwd()
+load("./data/preppedFullData.RData")
+
 ### 'longitudinal' style ###
 sentimentLong <- fullDataSet %>% 
   filter(date <= "2018-11-07") %>% 
@@ -130,6 +133,11 @@ searchBehaviorWeekBefore <- merge(x = behaviorDataSetWeekBefore,
                             y = usersTextWeekBefore[ , c("pmxid", "sentiment")], 
                             by = "pmxid",
                             all = TRUE)
+
+# saving
+save(searchBehaviorFull, file = "data/forModels/searchBehaviorFull.RData")
+save(searchBehaviorBefore, file = "data/forModels/searchBehaviorBefore.RData")
+save(searchBehaviorWeekBefore, file = "data/forModels/searchBehaviorWeekBefore.RData")
 
 
 

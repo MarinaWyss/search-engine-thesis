@@ -3,6 +3,9 @@ library(tidytext)
 library(quanteda)
 library(reshape2)
 
+# setwd()
+load("./data/preppedFullData.RData")
+
 # duplicates function
 dropDuplicates <- function(x){
   x <- x[!duplicated(x$pmxid), ]
@@ -21,10 +24,13 @@ searchTokensSingle <- fullDataSet %>%
   filter(!is.na(wordClean)) %>% 
   select(-wordClean, -hasNum) 
 
+############################
+########## keywords ########
+############################
 
 # vote/register and political keywords
 registerWords <- c("vote", "voting", "register", "voter", "registration",
-                   "election", "midterm")
+                   "election", "midterm", "#electionday", "#registertovote")
 
 politicalWords <- c("representatives", "congress", "candidate", 
                     "campaign", "republican", "democrat", "democratic",
@@ -67,7 +73,7 @@ searchesWeekBefore <- searchTokensSingle %>%
   dropDuplicates()
 
 # candidates
-states <- read.csv("stateMapping.csv", 
+states <- read.csv("./data/external/stateMapping.csv", 
                    header = FALSE, 
                    col.names = c("state", "stateName"))
 
@@ -80,7 +86,7 @@ stateDataSet <- stateDataSet %>%
   mutate(stateName = as.character(stateName),
          stateName = ifelse(is.na(stateName), "none", stateName))
 
-candidates <- read.csv("candidateInfoBiTriGram.csv", 
+candidates <- read.csv("./data/external/candidateInfoBiTriGram.csv", 
                        header = FALSE, 
                        col.names = c("state", "name", "party"))
 
@@ -143,7 +149,7 @@ candidateStateWeekBefore <- candidateTokens %>%
   dropDuplicates()
 
 # partisan politicians
-politicians <- read.csv("politicalFigures.csv", 
+politicians <- read.csv("./data/external/politicalFigures.csv", 
                         col.names = c("name", "party"))
 
 politicians <- politicians %>% 
@@ -215,7 +221,8 @@ fullSearchesJoined <- merge(fullSearches, candidateStateFull,
 
 fullSearchesJoined <- merge(fullSearchesJoined, politiciansFull, 
                             by = "pmxid",
-                            all = TRUE)
+                            all = TRUE)%>% 
+  select(-date, -word, -pmxid)
 
 beforeSearchesJoined <- merge(searchesBefore, candidateStateBefore, 
                               by = "pmxid",
@@ -223,7 +230,8 @@ beforeSearchesJoined <- merge(searchesBefore, candidateStateBefore,
 
 beforeSearchesJoined <- merge(beforeSearchesJoined, politiciansBefore, 
                               by = "pmxid",
-                              all = TRUE)
+                              all = TRUE)  %>% 
+  select(-date, -word, -pmxid)
 
 weekBeforeSearchesJoined <- merge(searchesWeekBefore, candidateStateWeekBefore, 
                                   by = "pmxid",
@@ -231,9 +239,19 @@ weekBeforeSearchesJoined <- merge(searchesWeekBefore, candidateStateWeekBefore,
 
 weekBeforeSearchesJoined <- merge(weekBeforeSearchesJoined, politiciansWeekBefore, 
                                   by = "pmxid",
-                                  all = TRUE)
+                                  all = TRUE) %>% 
+  select(-date, -word, -pmxid)
 
-# all search terms
+# saving
+save(fullSearchesJoined, file = "data/forModels/fullSearchesJoined.RData")
+save(beforeSearchesJoined, file = "data/forModels/beforeSearchesJoined.RData")
+save(weekBeforeSearchesJoined, file = "data/forModels/weekBeforeSearchesJoined.RData")
+
+
+############################
+##### all search terms #####
+############################
+
 fullText <- searchTokensSingle %>% 
   mutate(stemmed = char_wordstem(word)) %>%
   filter(nchar(stemmed) >= 2) %>% 
@@ -275,6 +293,12 @@ weekBeforeCorpus <- corpus(weekBeforeText)
 weekBeforeDFM <- dfm(weekBeforeCorpus)
 weekBeforeDFM <- dfm_trim(weekBeforeDFM, min_termfreq = 3)
 
+# saving
+save(fullDFM, file = "data/forModels/fullDFM.RData")
+save(beforeDFM, file = "data/forModels/beforeDFM.RData")
+save(weekBeforeDFM, file = "data/forModels/weekBeforeDFM.RData")
+
+
 # top 1000 search terms
 top1000Before <- searchTokensSingle %>% 
   filter(date <= "2018-11-07") %>% 
@@ -308,5 +332,7 @@ top1000WeekBefore <- searchTokensSingle %>%
 top1000WeekBeforeCorpus <- corpus(top1000WeekBefore)
 top1000WeekBeforeDFM <- dfm(top1000WeekBeforeCorpus)
 
-length(unique(top1000WeekBefore$stemmed))
+# saving
+save(top1000BeforeDFM, file = "data/forModels/top1000BeforeDFM.RData")
+save(top1000WeekBeforeDFM, file = "data/forModels/top1000WeekBeforeDFM.RData")
 

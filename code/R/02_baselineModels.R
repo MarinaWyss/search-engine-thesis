@@ -5,6 +5,9 @@ library(kableExtra)
 
 set.seed(12345)
 
+# setwd()
+load("./data/preppedFullData.RData")
+
 uniqueUsers <- fullDataSet[!duplicated(fullDataSet$pmxid), ]
 
 # prep data
