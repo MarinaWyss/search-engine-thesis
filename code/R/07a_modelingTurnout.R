@@ -4,6 +4,7 @@ library(lme4)
 library(DMwR)
 library(caret)
 library(kableExtra)
+library(e1071)
 
 set.seed(2342)
 
@@ -13,7 +14,8 @@ load("./data/forModels/weekBeforeSearchesJoined.RData")
 load("./data/forModels/searchBehaviorBefore.RData")
 load("./data/forModels/searchBehaviorWeekBefore.RData")
 load("./data/forModels/behaviorLongBefore.RData")
-
+load("./data/forModels/top1000BeforeDFM.RData")
+load("./data/forModels/beforeDFM.RData")
 
 # functions
 acc <- function(x, y){
@@ -36,23 +38,54 @@ rec <- function(x, y){
 #########################
 ########## DFM ##########
 #########################
-# pmxid <- docvars(top1000BeforeDFM$pm)
-# 
-# df <- data.frame(top1000BeforeDFM)
-# df <- cbind(pmxid$turnout, df)
-# df <- df %>% 
-#   select(-document) %>% 
-#   rename(turnout = `pmxid$turnout`)
-# 
-# dfUp <- upSample(x = df,
-#                  y = as.factor(df$turnout)) %>% 
-#   select(-Class)
-# 
-# indexDFM <- createDataPartition(dfUp$turnout, p = 0.7, 
-#                                      list = FALSE)
-# 
-# trainDataDFM <- dfUp[indexDFM, ]
-# testDataDFM  <- dfUp[-indexDFM, ]
+
+# prep data
+pmxid <- docvars(top1000BeforeDFM)
+
+top1000before <- convert(top1000BeforeDFM, to = "data.frame")
+top1000before <- top1000before[, !duplicated(colnames(top1000before))]
+top1000before <- cbind(pmxid$turnout, top1000before)
+
+top1000before <- top1000before %>% 
+  select(-document) %>% 
+  rename(turnout = `pmxid$turnout`) %>% 
+  filter(!is.na(turnout)) %>% 
+  mutate(turnout = factor(turnout)) %>% 
+  select_if(negate(function(col) is.numeric(col) && sum(col) < 1))
+
+# resampling the data 
+top1000BeforeBalanced <- SMOTE(turnout ~., 
+                               data = top1000before,
+                               perc.over = 500, 
+                               perc.under = 120)
+
+
+# split data into training and test 
+indexTop100Before <- createDataPartition(top1000BeforeBalanced$turnout, 
+                                         p = 0.7, 
+                                         list = FALSE)
+
+trainDataTop1000 <- top1000BeforeBalanced[indexTop100Before, ]
+testDataTop1000  <- top1000BeforeBalanced[-indexTop100Before, ]
+
+### SUPPORT VECTOR MACHINE ###
+svmTop1000Linear <- svm(turnout ~ ., 
+                        data = trainDataTop1000,
+                        kernel = "linear")
+
+# prediction
+preds <- predict(svmTop1000Linear, testDataTop1000[,-1])
+testY <- as.numeric(as.character(testDataTop1000$turnout))
+
+# metrics
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsSVM <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
 
 
 #########################
