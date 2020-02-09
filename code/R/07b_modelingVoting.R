@@ -4,6 +4,8 @@ library(lme4)
 library(DMwR)
 library(caret)
 library(kableExtra)
+library(e1071)
+library(vip)
 
 set.seed(2342)
 
@@ -12,6 +14,8 @@ load("./data/forModels/beforeSearchesJoined.RData")
 load("./data/forModels/weekBeforeSearchesJoined.RData")
 load("./data/forModels/searchBehaviorBefore.RData")
 load("./data/forModels/searchBehaviorWeekBefore.RData")
+load("./data/forModels/top1000BeforeDFM.RData")
+load("./data/forModels/top1000WeekBeforeDFM.RData")
 
 # functions
 acc <- function(x, y){
@@ -34,23 +38,83 @@ rec <- function(x, y){
 #########################
 ########## DFM ##########
 #########################
-# pmxid <- docvars(top1000BeforeDFM$pm)
-# 
-# df <- data.frame(top1000BeforeDFM)
-# df <- cbind(pmxid$turnout, df)
-# df <- df %>% 
-#   select(-document) %>% 
-#   rename(turnout = `pmxid$turnout`)
-# 
-# dfUp <- upSample(x = df,
-#                  y = as.factor(df$turnout)) %>% 
-#   select(-Class)
-# 
-# indexDFM <- createDataPartition(dfUp$turnout, p = 0.7, 
-#                                      list = FALSE)
-# 
-# trainDataDFM <- dfUp[indexDFM, ]
-# testDataDFM  <- dfUp[-indexDFM, ]
+
+# prep data
+pmxid <- docvars(top1000BeforeDFM)
+
+top1000before <- convert(top1000BeforeDFM, to = "data.frame")
+top1000before <- top1000before[, !duplicated(colnames(top1000before))]
+top1000before <- cbind(pmxid$voteChoice, top1000before)
+
+top1000before <- top1000before %>% 
+  select(-document) %>% 
+  rename(voteChoice = `pmxid$voteChoice`) %>% 
+  filter(!is.na(voteChoice) & voteChoice %in% c(1, 2)) %>% 
+  mutate(voteChoice = ifelse(voteChoice == 2, 0, 1),
+         voteChoice = factor(voteChoice)) %>% 
+  select_if(negate(function(col) is.numeric(col) && sum(col) < 1))
+
+# resampling the data 
+top1000BeforeBalanced <- SMOTE(voteChoice ~., 
+                               data = top1000before,
+                               perc.over = 500, 
+                               perc.under = 120)
+
+
+# split data into training and test 
+indexTop100Before <- createDataPartition(top1000BeforeBalanced$voteChoice, 
+                                         p = 0.7, 
+                                         list = FALSE)
+
+trainDataTop1000 <- top1000BeforeBalanced[indexTop100Before, ]
+testDataTop1000  <- top1000BeforeBalanced[-indexTop100Before, ]
+
+### SUPPORT VECTOR MACHINE ###
+# hyperparameters
+bestTune <- best.tune(svm, 
+                      train.x = trainDataTop1000[ ,-1],
+                      train.y = trainDataTop1000[ ,1],
+                      kernel = "linear",
+                      ranges = list(cost = 10^(-1:2),
+                                    gamma = c(0.5, 1, 2)))
+
+# modeling
+svmTop1000 <- svm(voteChoice ~ ., 
+                  data = trainDataTop1000,
+                  cost = 10,
+                  gamma  = 0.5,
+                  kernel = "linear")
+
+# prediction
+preds <- predict(svmTop1000, testDataTop1000[,-1])
+testY <- as.numeric(as.character(testDataTop1000$voteChoice))
+
+# metrics
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsSVM <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
+
+# feature importance
+w <- t(svmTop1000$coefs) %*% svmTop1000$SV                
+w <- apply(w, 2, function(v){sqrt(sum(v^2))}) 
+w <- sort(w, decreasing = T)
+topWeights <- data.frame(head(w, 20))
+topWeights <- topWeights %>% 
+  rownames_to_column("search_term") %>% 
+  rename("weight" = `head.w..20.`)
+
+svmBeforePlot <- ggplot(data = topWeights, 
+                        aes(x = reorder(search_term, weight), y = weight)) + 
+  geom_bar(stat = "identity", aes(fill = search_term)) +
+  coord_flip() + 
+  labs(x = "Query",
+       y = "Weight",
+       title = "SVM FI")
 
 
 #########################
@@ -161,7 +225,7 @@ xgbTrain <- xgboost(
 )
 
 # vip
-vip::vip(xgbTrain) 
+vip(xgbTrain) 
 
 # prediction 
 preds <- predict(xgbTrain, as.matrix(testDataSearches[-1]))
@@ -288,7 +352,7 @@ xgbTrain <- xgboost(
 )
 
 # vip
-vip::vip(xgbTrain) 
+vip(xgbTrain) 
 
 # prediction 
 preds <- predict(xgbTrain, as.matrix(testDataBehavior[-1]))
@@ -419,7 +483,7 @@ xgbTrain <- xgboost(
 )
 
 # vip
-vip::vip(xgbTrain) 
+vip(xgbTrain) 
 
 # prediction 
 testY <- testDataAll$voteChoice
