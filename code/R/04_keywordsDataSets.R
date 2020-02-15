@@ -40,10 +40,10 @@ politicalWords <- c("representatives", "congress", "candidate",
 fullSearches <- searchTokensSingle %>% 
   group_by(pmxid) %>% 
   mutate(register_word = ifelse(word %in% registerWords, 1, 0),
-         num_register_searches = sum(register_word),
+         num_register_searches = sum(register_word, na.rm = TRUE),
          searched_register = ifelse(num_register_searches >= 1, 1, 0),
          political_word = ifelse(word %in% politicalWords, 1, 0),
-         num_political_searches = sum(political_word),
+         num_political_searches = sum(political_word, na.rm = TRUE),
          searched_politics = ifelse(num_political_searches >= 1, 1, 0)) %>% 
   select(-register_word, -political_word) %>% 
   dropDuplicates()
@@ -52,10 +52,10 @@ searchesBefore <- searchTokensSingle %>%
   filter(date <= "2018-11-07") %>% 
   group_by(pmxid) %>% 
   mutate(register_word = ifelse(word %in% registerWords, 1, 0),
-         num_register_searches = sum(register_word),
+         num_register_searches = sum(register_word, na.rm = TRUE),
          searched_register = ifelse(num_register_searches >= 1, 1, 0),
          political_word = ifelse(word %in% politicalWords, 1, 0),
-         num_political_searches = sum(political_word),
+         num_political_searches = sum(political_word, na.rm = TRUE),
          searched_politics = ifelse(num_political_searches >= 1, 1, 0)) %>% 
   select(-register_word, -political_word) %>% 
   dropDuplicates()
@@ -64,10 +64,10 @@ searchesWeekBefore <- searchTokensSingle %>%
   filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
   group_by(pmxid) %>% 
   mutate(register_word = ifelse(word %in% registerWords, 1, 0),
-         num_register_searches = sum(register_word),
+         num_register_searches = sum(register_word, na.rm = TRUE),
          searched_register = ifelse(num_register_searches >= 1, 1, 0),
          political_word = ifelse(word %in% politicalWords, 1, 0),
-         num_political_searches = sum(political_word),
+         num_political_searches = sum(political_word, na.rm = TRUE),
          searched_politics = ifelse(num_political_searches >= 1, 1, 0)) %>% 
   select(-register_word, -political_word) %>% 
   dropDuplicates()
@@ -118,9 +118,9 @@ candidateStateFull <- candidateTokens %>%
          rep_candidate_search = ifelse(str_detect(Republican, word), 1, 0),
          other_candidate_search = ifelse(str_detect(Other, word), 1, 0)) %>% 
   group_by(pmxid) %>% 
-  mutate(searched_dem_candidate = ifelse(sum(dem_candidate_search) >= 1, 1, 0),
-         searched_rep_candidate = ifelse(sum(rep_candidate_search) >= 1, 1, 0),
-         searched_other_candidate = ifelse(sum(other_candidate_search) >= 1, 1, 0)) %>% 
+  mutate(searched_dem_candidate = ifelse(sum(dem_candidate_search, na.rm = TRUE) >= 1, 1, 0),
+         searched_rep_candidate = ifelse(sum(rep_candidate_search, na.rm = TRUE) >= 1, 1, 0),
+         searched_other_candidate = ifelse(sum(other_candidate_search, na.rm = TRUE) >= 1, 1, 0)) %>% 
   select(pmxid, searched_dem_candidate, searched_rep_candidate, searched_other_candidate) %>% 
   dropDuplicates()
 
@@ -130,9 +130,9 @@ candidateStateBefore <- candidateTokens %>%
          rep_candidate_search = ifelse(str_detect(Republican, word), 1, 0),
          other_candidate_search = ifelse(str_detect(Other, word), 1, 0)) %>% 
   group_by(pmxid) %>% 
-  mutate(searched_dem_candidate = ifelse(sum(dem_candidate_search) >= 1, 1, 0),
-         searched_rep_candidate = ifelse(sum(rep_candidate_search) >= 1, 1, 0),
-         searched_other_candidate = ifelse(sum(other_candidate_search) >= 1, 1, 0)) %>% 
+  mutate(searched_dem_candidate = ifelse(sum(dem_candidate_search, na.rm = TRUE) >= 1, 1, 0),
+         searched_rep_candidate = ifelse(sum(rep_candidate_search, na.rm = TRUE) >= 1, 1, 0),
+         searched_other_candidate = ifelse(sum(other_candidate_search, na.rm = TRUE) >= 1, 1, 0)) %>% 
   select(pmxid, searched_dem_candidate, searched_rep_candidate, searched_other_candidate) %>% 
   dropDuplicates()
 
@@ -142,9 +142,9 @@ candidateStateWeekBefore <- candidateTokens %>%
          rep_candidate_search = ifelse(str_detect(Republican, word), 1, 0),
          other_candidate_search = ifelse(str_detect(Other, word), 1, 0)) %>% 
   group_by(pmxid) %>% 
-  mutate(searched_dem_candidate = ifelse(sum(dem_candidate_search) >= 1, 1, 0),
-         searched_rep_candidate = ifelse(sum(rep_candidate_search) >= 1, 1, 0),
-         searched_other_candidate = ifelse(sum(other_candidate_search) >= 1, 1, 0)) %>% 
+  mutate(searched_dem_candidate = ifelse(sum(dem_candidate_search, na.rm = TRUE) >= 1, 1, 0),
+         searched_rep_candidate = ifelse(sum(rep_candidate_search, na.rm = TRUE) >= 1, 1, 0),
+         searched_other_candidate = ifelse(sum(other_candidate_search, na.rm = TRUE) >= 1, 1, 0)) %>% 
   select(pmxid, searched_dem_candidate, searched_rep_candidate, searched_other_candidate) %>% 
   dropDuplicates()
 
@@ -179,11 +179,11 @@ politicianTokens <- fullDataSet %>%
 politiciansFull <- politicianTokens %>% 
   group_by(pmxid) %>% 
   mutate(dem_word = ifelse(word %in% dems, 1, 0),
-         num_dem_searches = sum(dem_word),
-         searched_dem = ifelse(sum(dem_word) >= 1, 1, 0),
+         num_dem_searches = sum(dem_word, na.rm = TRUE),
+         searched_dem = ifelse(sum(dem_word, na.rm = TRUE) >= 1, 1, 0),
          rep_word = ifelse(word %in% reps, 1, 0),
-         num_rep_searches = sum(rep_word),
-         searched_rep = ifelse(sum(rep_word) >= 1, 1, 0)) %>% 
+         num_rep_searches = sum(rep_word, na.rm = TRUE),
+         searched_rep = ifelse(sum(rep_word, na.rm = TRUE) >= 1, 1, 0)) %>% 
   select(pmxid, searched_dem, num_dem_searches, 
          searched_rep, num_rep_searches) %>% 
   dropDuplicates()
@@ -192,11 +192,11 @@ politiciansBefore <- politicianTokens %>%
   filter(date <= "2018-11-07") %>% 
   group_by(pmxid) %>% 
   mutate(dem_word = ifelse(word %in% dems, 1, 0),
-         num_dem_searches = sum(dem_word),
-         searched_dem = ifelse(sum(dem_word) >= 1, 1, 0),
+         num_dem_searches = sum(dem_word, na.rm = TRUE),
+         searched_dem = ifelse(sum(dem_word, na.rm = TRUE) >= 1, 1, 0),
          rep_word = ifelse(word %in% reps, 1, 0),
-         num_rep_searches = sum(rep_word),
-         searched_rep = ifelse(sum(rep_word) >= 1, 1, 0)) %>% 
+         num_rep_searches = sum(rep_word, na.rm = TRUE),
+         searched_rep = ifelse(sum(rep_word, na.rm = TRUE) >= 1, 1, 0)) %>% 
   select(pmxid, searched_dem, num_dem_searches, 
          searched_rep, num_rep_searches) %>% 
   dropDuplicates()
@@ -205,11 +205,11 @@ politiciansWeekBefore <- politicianTokens %>%
   filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
   group_by(pmxid) %>% 
   mutate(dem_word = ifelse(word %in% dems, 1, 0),
-         num_dem_searches = sum(dem_word),
-         searched_dem = ifelse(sum(dem_word) >= 1, 1, 0),
+         num_dem_searches = sum(dem_word, na.rm = TRUE),
+         searched_dem = ifelse(sum(dem_word, na.rm = TRUE) >= 1, 1, 0),
          rep_word = ifelse(word %in% reps, 1, 0),
-         num_rep_searches = sum(rep_word),
-         searched_rep = ifelse(sum(rep_word) >= 1, 1, 0)) %>% 
+         num_rep_searches = sum(rep_word, na.rm = TRUE),
+         searched_rep = ifelse(sum(rep_word, na.rm = TRUE) >= 1, 1, 0)) %>% 
   select(pmxid, searched_dem, num_dem_searches, 
          searched_rep, num_rep_searches) %>% 
   dropDuplicates()

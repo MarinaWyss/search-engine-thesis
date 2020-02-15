@@ -23,7 +23,7 @@ load("./data/forModels/bigramsWeekBeforeDFM.RData")
 
 # functions
 acc <- function(x, y){
-  1 - (as.numeric(sum(x != y)) / length(y))
+  1 - (as.numeric(sum(x != y, na.rm = TRUE)) / length(y))
 }
 
 prec <- function(x, y){
@@ -260,6 +260,7 @@ metricsXGBDFM <- data.frame(accuracy, precision, recall, F1) %>%
 #########################
 ######## searches #######
 #########################
+# prep data
 searches <- beforeSearchesJoined %>% 
   select(-voteChoice, -pmxid) %>% 
   filter(!is.na(turnout)) %>% 
@@ -279,6 +280,7 @@ trainDataSearchesBalanced <- SMOTE(turnout ~.,
                                    perc.over = 500, 
                                    perc.under = 120)
 
+### XGBOOST ###
 # prep variables
 X <- as.matrix(trainDataSearchesBalanced[setdiff(names(trainDataSearchesBalanced), "turnout")])
 Y <- as.numeric(as.character(trainDataSearchesBalanced$turnout))
@@ -352,14 +354,15 @@ params <- list(
   max_depth = 3,
   min_child_weight = 3,
   subsample = 0.5,
-  colsample_bytree = 0.5
+  colsample_bytree = 0.5, 
+  gamma = 10
 )
 
 xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 8,
+  nrounds = 122,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -378,15 +381,81 @@ precision <- prec(preds, testY)
 recall <- rec(preds, testY)
 F1 <- (2 * precision * recall) / (precision + recall)
 
-metricsSearches <- data.frame(accuracy, precision, recall, F1) %>% 
+metricsSearchesXGB <- data.frame(accuracy, precision, recall, F1) %>% 
   kable() %>% 
   kable_styling()
 
+
+### LOGISTIC REGRESSION ###
+lrSearches <- glm(turnout ~., 
+                  data = trainDataSearchesBalanced, 
+                  family = binomial(link = "logit"))
+
+summary(lrSearches)
+
+# prediction 
+preds = ifelse(predict(lrSearches, 
+                testDataSearches, 
+                type = "response") > 0.6, 1, 0)
+
+testY <- as.numeric(as.character(testDataSearches$turnout))
+
+# metrics
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsSearchesLR <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
+
+
+### KNN ###
+# prep variables
+trainKNNSearches <- trainDataSearchesBalanced %>%
+  select(-searched_other_candidate) %>% 
+  mutate(turnout = factor(turnout)) %>% 
+  na.omit()
+
+testKNNSearches <- testDataSearches %>% 
+  select(-searched_other_candidate) %>% 
+  mutate(turnout = factor(turnout)) %>% 
+  na.omit()
+
+# hyperparameters
+ctrl <- trainControl(method = "repeatedcv",
+                     repeats = 10)
+
+knnFit <- train(turnout ~ ., 
+                data = trainKNNSearches, 
+                method = "knn", 
+                trControl = ctrl, 
+                preProcess = c("center","scale"),
+                tuneLength = 20)
+
+# prediction
+preds <- predict(knnFit, newdata = testKNNSearches[, -1])
+testY <- testKNNSearches$turnout
+
+# metrics
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsSearchesKNN <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
+
+# feature importance
+vi <- varImp(knnFit)
 
 
 #########################
 ######## behavior #######
 #########################
+# data prep
 behavior <- searchBehaviorBefore %>% 
   select(-pmxid, -voteChoice) %>% 
   filter(!is.na(turnout)) %>% 
@@ -406,6 +475,7 @@ trainDataBehaviorBalanced <- SMOTE(turnout ~.,
                                    perc.over = 500, 
                                    perc.under = 120)
 
+### XGBOOST ###
 # scaling
 trainDataBehaviorBalanced <- trainDataBehaviorBalanced %>% 
   mutate_at(vars(time_reg, mean_search_length, sentiment), 

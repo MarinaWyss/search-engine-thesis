@@ -21,7 +21,7 @@ load("./data/forModels/bigramsWeekBeforeDFM.RData")
 
 # functions
 acc <- function(x, y){
-  1 - (as.numeric(sum(x != y)) / length(y))
+  1 - (as.numeric(sum(x != y, na.rm = TRUE)) / length(y))
 }
 
 prec <- function(x, y){
@@ -259,6 +259,7 @@ metricsXGBDFM <- data.frame(accuracy, precision, recall, F1) %>%
 #########################
 ######## searches #######
 #########################
+# data prep
 searches <- beforeSearchesJoined %>% 
   select(-turnout, -pmxid) %>% 
   filter(!is.na(voteChoice) & voteChoice %in% c(1, 2)) %>% 
@@ -279,6 +280,7 @@ trainDataSearchesBalanced <- SMOTE(voteChoice ~.,
                                    perc.over = 200, 
                                    perc.under = 150)
 
+### XGBOOST ###
 # variables
 X <- as.matrix(trainDataSearchesBalanced[setdiff(names(trainDataSearchesBalanced), "voteChoice")])
 Y <- as.numeric(as.character(trainDataSearchesBalanced$voteChoice))
@@ -379,10 +381,75 @@ precision <- prec(preds, testY)
 recall <- rec(preds, testY)
 F1 <- (2 * precision * recall) / (precision + recall)
 
-metricsSearches <- data.frame(accuracy, precision, recall, F1) %>% 
+metricsSearchesXGB <- data.frame(accuracy, precision, recall, F1) %>% 
   kable() %>% 
   kable_styling()
 
+
+### LOGISTIC REGRESSION ###
+lrSearches <- glm(voteChoice ~., 
+                  data = trainDataSearchesBalanced, 
+                  family = binomial(link = "logit"))
+
+summary(lrSearches)
+
+# prediction 
+preds = ifelse(predict(lrSearches, 
+                       testDataSearches, 
+                       type = "response") > 0.6, 1, 0)
+
+testY <- as.numeric(as.character(testDataSearches$voteChoice))
+
+# metrics
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsSearchesLR <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
+
+
+### KNN ###
+# prep variables
+trainKNNSearches <- trainDataSearchesBalanced %>%
+  select(-searched_other_candidate) %>% 
+  mutate(voteChoice = factor(voteChoice)) %>% 
+  na.omit()
+
+testKNNSearches <- testDataSearches %>% 
+  select(-searched_other_candidate) %>% 
+  mutate(voteChoice = factor(voteChoice)) %>% 
+  na.omit()
+
+# hyperparameters
+ctrl <- trainControl(method = "repeatedcv",
+                     repeats = 10)
+
+knnFit <- train(voteChoice ~ ., 
+                data = trainKNNSearches, 
+                method = "knn", 
+                trControl = ctrl, 
+                preProcess = c("center","scale"),
+                tuneLength = 20)
+
+# prediction
+preds <- predict(knnFit, newdata = testKNNSearches[, -1])
+testY <- testKNNSearches$voteChoice
+
+# metrics
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsSearchesKNN <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
+
+# feature importance
+vi <- varImp(knnFit)
 
 
 #########################
