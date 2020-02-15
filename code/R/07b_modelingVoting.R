@@ -149,6 +149,113 @@ metricsLogReg <- data.frame(accuracy, precision, recall, F1) %>%
 vip(cv, num_features = 20, geom = "point")
 
 
+### XGBOOST ###
+# prep variables
+X <- as.matrix(trainDataTop1000Balanced[setdiff(names(trainDataTop1000Balanced), "voteChoice")])
+Y <- as.numeric(as.character(trainDataTop1000Balanced$voteChoice))
+
+# cross validation
+searchesCV <- xgb.cv(
+  data = X,
+  label = Y,
+  nrounds = 6000,
+  objective = "binary:logistic",
+  early_stopping_rounds = 50, 
+  nfold = 10,
+  params = list(
+    eta = 0.1,
+    max_depth = 3,
+    min_child_weight = 3,
+    subsample = 0.8,
+    colsample_bytree = 1.0),
+  verbose = 0
+)  
+
+# minimum test CV error
+min(searchesCV$evaluation_log$test_error_mean)
+
+# hyperparameters
+hyper_grid <- expand.grid(
+  eta = 0.01,
+  max_depth = 3, 
+  min_child_weight = 3,
+  subsample = 0.5, 
+  colsample_bytree = 0.5,
+  gamma = c(0, 1, 10, 100, 1000),
+  lambda = c(0, 1e-2, 0.1, 1, 100, 1000, 10000),
+  alpha = c(0, 1e-2, 0.1, 1, 100, 1000, 10000),
+  error = 0,          
+  trees = 0          
+)
+
+for(i in seq_len(nrow(hyper_grid))) {
+  set.seed(123)
+  m <- xgb.cv(
+    data = X,
+    label = Y,
+    nrounds = 4000,
+    objective = "binary:logistic",
+    early_stopping_rounds = 50, 
+    nfold = 10,
+    verbose = 0,
+    params = list( 
+      eta = hyper_grid$eta[i], 
+      max_depth = hyper_grid$max_depth[i],
+      min_child_weight = hyper_grid$min_child_weight[i],
+      subsample = hyper_grid$subsample[i],
+      colsample_bytree = hyper_grid$colsample_bytree[i],
+      gamma = hyper_grid$gamma[i], 
+      lambda = hyper_grid$lambda[i], 
+      alpha = hyper_grid$alpha[i]
+    ) 
+  )
+  hyper_grid$error[i] <- min(m$evaluation_log$test_error_mean)
+  hyper_grid$trees[i] <- m$best_iteration
+}
+
+hyper_grid %>%
+  filter(error > 0) %>%
+  arrange(error) %>%
+  glimpse()
+
+params <- list(
+  eta = 0.01,
+  max_depth = 3,
+  min_child_weight = 3,
+  subsample = 0.5,
+  colsample_bytree = 0.5,
+  lambda = 0.01, 
+  gamma = 1
+)
+
+xgbTrain <- xgboost(
+  params = params,
+  data = X,
+  label = Y,
+  nrounds = 343,
+  objective = "binary:logistic",
+  verbose = 0
+)
+
+# vip
+vip(xgbTrain) 
+
+# prediction 
+preds <- predict(xgbTrain, as.matrix(testDataTop1000[-1]))
+preds <- as.integer(preds > 0.5)
+testY <- testDataTop1000$voteChoice
+
+# metrics
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsXGBDFM <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
+
+
 #########################
 ######## searches #######
 #########################
