@@ -54,33 +54,32 @@ top1000before <- top1000before %>%
          voteChoice = factor(voteChoice)) %>% 
   select_if(negate(function(col) is.numeric(col) && sum(col) < 1))
 
-# resampling the data 
-top1000BeforeBalanced <- SMOTE(voteChoice ~., 
-                               data = top1000before,
-                               perc.over = 500, 
-                               perc.under = 120)
-
-
 # split data into training and test 
-indexTop100Before <- createDataPartition(top1000BeforeBalanced$voteChoice, 
+indexTop100Before <- createDataPartition(top1000before$voteChoice, 
                                          p = 0.7, 
                                          list = FALSE)
 
-trainDataTop1000 <- top1000BeforeBalanced[indexTop100Before, ]
-testDataTop1000  <- top1000BeforeBalanced[-indexTop100Before, ]
+trainDataTop1000 <- top1000before[indexTop100Before, ]
+testDataTop1000  <- top1000before[-indexTop100Before, ]
+
+# resampling the data 
+trainDataTop1000Balanced <- SMOTE(voteChoice ~., 
+                                  data = trainDataTop1000,
+                                  perc.over = 200, 
+                                  perc.under = 150)
 
 ### SUPPORT VECTOR MACHINE ###
 # hyperparameters
 bestTune <- best.tune(svm, 
-                      train.x = trainDataTop1000[ ,-1],
-                      train.y = trainDataTop1000[ ,1],
+                      train.x = trainDataTop1000Balanced[ ,-1],
+                      train.y = trainDataTop1000Balanced[ ,1],
                       kernel = "linear",
                       ranges = list(cost = 10^(-1:2),
                                     gamma = c(0.5, 1, 2)))
 
 # modeling
 svmTop1000 <- svm(voteChoice ~ ., 
-                  data = trainDataTop1000,
+                  data = trainDataTop1000Balanced,
                   cost = 10,
                   gamma  = 0.5,
                   kernel = "linear")
@@ -126,22 +125,23 @@ searches <- beforeSearchesJoined %>%
   mutate(voteChoice = ifelse(voteChoice == 2, 0, 1),
          voteChoice = factor(voteChoice))
 
-# resampling the data 
-searchesBalanced <- SMOTE(voteChoice ~., 
-                          data = searches,
-                          perc.over = 500, 
-                          perc.under = 120)
-
 # split data into training and test and prep
-indexSearches <- createDataPartition(searchesBalanced$voteChoice, 
+indexSearches <- createDataPartition(searches$voteChoice, 
                                      p = 0.7, 
                                      list = FALSE)
 
-trainDataSearches <- searchesBalanced[indexSearches, ]
-testDataSearches  <- searchesBalanced[-indexSearches, ]
+trainDataSearches <- searches[indexSearches, ]
+testDataSearches  <- searches[-indexSearches, ]
 
-X <- as.matrix(trainDataSearches[setdiff(names(trainDataSearches), "voteChoice")])
-Y <- as.numeric(as.character(trainDataSearches$voteChoice))
+# resampling the data 
+trainDataSearchesBalanced <- SMOTE(voteChoice ~., 
+                                   data = trainDataSearches,
+                                   perc.over = 200, 
+                                   perc.under = 150)
+
+# variables
+X <- as.matrix(trainDataSearchesBalanced[setdiff(names(trainDataSearchesBalanced), "voteChoice")])
+Y <- as.numeric(as.character(trainDataSearchesBalanced$voteChoice))
 
 # cross validation
 searchesCV <- xgb.cv(
@@ -212,14 +212,15 @@ params <- list(
   max_depth = 3,
   min_child_weight = 3,
   subsample = 0.5,
-  colsample_bytree = 0.5
+  colsample_bytree = 0.5, 
+  lambda = 0.10
 )
 
 xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 238,
+  nrounds = 239,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -253,22 +254,23 @@ behavior <- searchBehaviorBefore %>%
   mutate(voteChoice = ifelse(voteChoice == 2, 0, 1),
          voteChoice = factor(voteChoice))
 
-# resampling the data 
-behaviorBalanced <- SMOTE(voteChoice ~., 
-                          data = behavior,
-                          perc.over = 500, 
-                          perc.under = 120)
-
 # split data into training and test and prep
-indexBehavior <- createDataPartition(behaviorBalanced$voteChoice, 
+indexBehavior <- createDataPartition(behavior$voteChoice, 
                                      p = 0.7, 
                                      list = FALSE)
 
-trainDataBehavior <- behaviorBalanced[indexBehavior, ]
-testDataBehavior  <- behaviorBalanced[-indexBehavior, ]
+trainDataBehavior <- behavior[indexBehavior, ]
+testDataBehavior  <- behavior[-indexBehavior, ]
 
-X <- as.matrix(trainDataBehavior[setdiff(names(trainDataBehavior), "voteChoice")])
-Y <- as.numeric(as.character(trainDataBehavior$voteChoice))
+# resampling the data 
+trainDataBehaviorBalanced <- SMOTE(voteChoice ~., 
+                                   data = trainDataBehavior,
+                                   perc.over = 200, 
+                                   perc.under = 150)
+
+# variables
+X <- as.matrix(trainDataBehaviorBalanced[setdiff(names(trainDataBehaviorBalanced), "voteChoice")])
+Y <- as.numeric(as.character(trainDataBehaviorBalanced$voteChoice))
 
 # cross validation
 behaviorCV <- xgb.cv(
@@ -339,14 +341,16 @@ params <- list(
   max_depth = 3,
   min_child_weight = 3,
   subsample = 0.5,
-  colsample_bytree = 0.5
+  colsample_bytree = 0.5,
+  alpha = 0.01,
+  lambda = 0.01
 )
 
 xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 795,
+  nrounds = 510,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -383,22 +387,22 @@ allData <- allData %>%
   mutate(voteChoice = ifelse(voteChoice == 2, 0, 1),
          voteChoice = factor(voteChoice))
 
-# resampling the data 
-allDataBalanced <- SMOTE(voteChoice ~., 
-                         data = allData,
-                         perc.over = 500, 
-                         perc.under = 120)
-
 # split data into training and test and prep
-indexAll <- createDataPartition(allDataBalanced$voteChoice, 
+indexAll <- createDataPartition(allData$voteChoice, 
                                 p = 0.7, 
                                 list = FALSE)
 
-trainDataAll <- allDataBalanced[indexAll, ]
-testDataAll  <- allDataBalanced[-indexAll, ]
+trainDataAll <- allData[indexAll, ]
+testDataAll  <- allData[-indexAll, ]
 
-X <- as.matrix(trainDataAll[setdiff(names(trainDataAll), "voteChoice")])
-Y <- as.numeric(as.character(trainDataAll$voteChoice))
+# resampling the data 
+trainDataAllBalanced <- SMOTE(voteChoice ~., 
+                              data = trainDataAll,
+                              perc.over = 200, 
+                              perc.under = 150)
+
+X <- as.matrix(trainDataAllBalanced[setdiff(names(trainDataAllBalanced), "voteChoice")])
+Y <- as.numeric(as.character(trainDataAllBalanced$voteChoice))
 
 # cross validation
 allCV <- xgb.cv(
@@ -470,14 +474,15 @@ params <- list(
   min_child_weight = 3,
   subsample = 0.5,
   colsample_bytree = 0.5,
-  alpha = 1.0
+  lamda = 0.01,
+  alpha = 0.10
 )
 
 xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 721,
+  nrounds = 596,
   objective = "binary:logistic",
   verbose = 0
 )
