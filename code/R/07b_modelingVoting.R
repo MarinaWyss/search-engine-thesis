@@ -117,6 +117,37 @@ svmBeforePlot <- ggplot(data = topWeights,
        y = "Weight",
        title = "SVM FI")
 
+### REGULARIZED LOGISTIC REGRESSION ###
+X <- model.matrix(voteChoice ~ ., trainDataTop1000Balanced)[, -1]
+Y <- as.numeric(as.character(trainDataTop1000Balanced$voteChoice))
+
+cv <- cv.glmnet(X, Y, 
+                alpha = 1,
+                family = "binomial",
+                type.measure = "class")
+
+lambda_1se <- cv$lambda.1se
+
+# prediction
+testX <- model.matrix(voteChoice ~ ., testDataTop1000)[, -1]
+testY <- as.numeric(as.character(testDataTop1000$voteChoice))
+preds <- ifelse(predict(cv, 
+                        newx = testX, 
+                        s = lambda_1se, 
+                        type = "response") > 0.5, 1, 0)
+
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+F1 <- (2 * precision * recall) / (precision + recall)
+
+metricsLogReg <- data.frame(accuracy, precision, recall, F1) %>% 
+  kable() %>% 
+  kable_styling()
+
+# feature importance
+vip(cv, num_features = 20, geom = "point")
+
 
 #########################
 ######## searches #######
