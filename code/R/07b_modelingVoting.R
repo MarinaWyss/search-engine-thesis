@@ -16,6 +16,8 @@ load("./data/forModels/searchBehaviorBefore.RData")
 load("./data/forModels/searchBehaviorWeekBefore.RData")
 load("./data/forModels/top1000BeforeDFM.RData")
 load("./data/forModels/top1000WeekBeforeDFM.RData")
+load("./data/forModels/bigramsBeforeDFM.RData")
+load("./data/forModels/bigramsWeekBeforeDFM.RData")
 
 # functions
 acc <- function(x, y){

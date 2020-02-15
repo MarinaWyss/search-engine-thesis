@@ -336,3 +336,48 @@ top1000WeekBeforeDFM <- dfm(top1000WeekBeforeCorpus)
 save(top1000BeforeDFM, file = "data/forModels/top1000BeforeDFM.RData")
 save(top1000WeekBeforeDFM, file = "data/forModels/top1000WeekBeforeDFM.RData")
 
+
+# top 1000 bigrams
+bigramsBefore <- fullDataSet %>% 
+  filter(date <= "2018-11-07") %>% 
+  unnest_tokens(word, search_term, 
+                token = "ngrams",
+                n = 2) %>% 
+  anti_join(get_stopwords()) %>% 
+  filter(!is.na(word)) %>% 
+  mutate(word = str_replace(word, " ", "_")) %>% 
+  group_by(word) %>% 
+  mutate(num_searches = n()) %>% 
+  filter(num_searches >= 29) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(word, collapse =" "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice))
+
+bigramsBeforeCorpus <- corpus(bigramsBefore)
+bigramsBeforeDFM <- dfm(bigramsBeforeCorpus)
+
+
+bigramsWeekBefore <- fullDataSet %>% 
+  filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
+  unnest_tokens(word, search_term, 
+                token = "ngrams",
+                n = 2) %>% 
+  anti_join(get_stopwords()) %>% 
+  filter(!is.na(word)) %>% 
+  mutate(word = str_replace(word, " ", "_")) %>% 
+  group_by(word) %>% 
+  mutate(num_searches = n()) %>% 
+  filter(num_searches >= 5) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(word, collapse =" "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice))
+
+bigramsWeekBeforeCorpus <- corpus(bigramsWeekBefore)
+bigramsWeekBeforeDFM <- dfm(bigramsWeekBeforeCorpus)
+
+# saving
+save(bigramsBeforeDFM, file = "data/forModels/bigramsBeforeDFM.RData")
+save(bigramsWeekBeforeDFM, file = "data/forModels/bigramsWeekBeforeDFM.RData")
+
