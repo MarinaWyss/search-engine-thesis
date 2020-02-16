@@ -3,6 +3,7 @@ library(sentimentr)
 library(chron)
 
 # setwd()
+source("./code/R/00_functions.R")
 load("./data/preppedFullData.RData")
 
 ############################
@@ -58,11 +59,6 @@ save(behaviorLongWeekBefore, file = "./data/forModels/behaviorLongWeekBefore.RDa
 ############################
 ######### by pmxid #########
 ############################
-
-# duplicates function
-dropDuplicates <- function(x){
-  x <- x[!duplicated(x$pmxid), ]
-}
 
 # sentiment all searches
 usersTextFull <- fullDataSet %>% 

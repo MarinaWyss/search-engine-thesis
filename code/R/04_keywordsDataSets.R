@@ -4,12 +4,8 @@ library(quanteda)
 library(reshape2)
 
 # setwd()
+source("./code/R/00_functions.R")
 load("./data/preppedFullData.RData")
-
-# duplicates function
-dropDuplicates <- function(x){
-  x <- x[!duplicated(x$pmxid), ]
-}
 
 # search data prep
 '%ni%' <- Negate('%in%')
