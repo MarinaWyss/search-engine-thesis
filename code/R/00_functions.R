@@ -32,3 +32,6 @@ metrics <- function(accuracy, precision, recall, F1){
     kable() %>% 
     kable_styling()
 }
+
+# negate
+'%ni%' <- Negate('%in%')

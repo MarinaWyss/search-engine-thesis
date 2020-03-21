@@ -8,8 +8,6 @@ source("./code/R/00_functions.R")
 load("./data/preppedFullData.RData")
 
 # search data prep
-'%ni%' <- Negate('%in%')
-
 fullDataSet <- fullDataSet %>% 
   mutate(search_id = row_number())
 
@@ -437,7 +435,7 @@ searchIdsPoliticians <- politicianSearches %>%
   select(search_id) %>% 
   unique()
 
-searchIds<- rbind(searchIdsPolitical, searchIdsPoliticians)
+searchIds <- rbind(searchIdsPolitical, searchIdsPoliticians)
 searchIds <- as.vector(unlist(searchIds))
 
 beforeTextPolitical <- fullDataSet %>% 
@@ -468,4 +466,43 @@ weekBeforeDFMPolitical <- dfm_trim(weekBeforeDFMPolitical, min_termfreq = 3)
 
 save(beforeDFMPolitical, file = "data/forModels/beforeDFMPolitical.RData")
 save(weekBeforeDFMPolitical, file = "data/forModels/weekBeforeDFMPolitical.RData")
+
+#############################
+##### just text blocks ######
+#############################
+
+textBlockBefore <- fullDataSet %>% 
+  filter(date <= "2018-11-07") %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(search_term, collapse =". "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice))
+
+textBlockWeekBefore <- fullDataSet %>% 
+  filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(search_term, collapse =". "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice)) 
+
+textBlockPoliticalBefore <- fullDataSet %>% 
+  filter(date <= "2018-11-07") %>% 
+  filter(search_id %in% searchIds) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(search_term, collapse =". "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice))
+
+textBlockPoliticalWeekBefore <- fullDataSet %>% 
+  filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
+  filter(search_id %in% searchIds) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(search_term, collapse =". "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice))
+
+write.csv(textBlockBefore, file = "data/forModels/textBlockBefore.csv")
+write.csv(textBlockWeekBefore, file = "data/forModels/textBlockWeekBefore.csv")
+write.csv(textBlockPoliticalBefore, file = "data/forModels/textBlockPoliticalBefore.csv")
+write.csv(textBlockPoliticalWeekBefore, file = "data/forModels/textBlockPoliticalWeekBefore.csv")
 
