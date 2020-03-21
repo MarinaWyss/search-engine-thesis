@@ -18,13 +18,16 @@ load("./data/forModels/top1000BeforeDFM.RData")
 load("./data/forModels/top1000WeekBeforeDFM.RData")
 load("./data/forModels/bigramsBeforeDFM.RData")
 load("./data/forModels/bigramsWeekBeforeDFM.RData")
+load("./data/forModels/beforeDFMPolitical.RData")
+load("./data/forModels/weekBeforeDFMPolitical.RData")
 
 # FEATURE ENGINEERED ------------------------------------------------------------
 
 # join data
-allData <- merge(searchBehaviorWeekBefore,
-                 weekBeforeSearchesJoined[c(-2, -3)],
-                 by = "pmxid") 
+allData <- merge(searchBehaviorBefore,
+                 beforeSearchesJoined[c(-2, -3)],
+                 by = "pmxid") %>% 
+  select(-search_id)
 
 # TURNOUT --------------------------------
 
@@ -117,7 +120,7 @@ hyper_grid %>%
   arrange(error) %>%
   glimpse()
 
-# before: eta 0.01, max_depth 3, min_child 3, subsample 0.5, colsample 0.5, gamma 1, lambda 0.01, trees 138
+# before: eta 0.01, max_depth 3, min_child 3, subsample 0.5, colsample 0.5, alpha 0.01, trees 121
 # week before: eta 0.01, max_depth 3, min_child 3, subsample 0.5, colsample 0.5, lambda 1, alpha 1, trees 18
 
 params <- list(
@@ -126,15 +129,14 @@ params <- list(
   min_child_weight = 3,
   subsample = 0.5,
   colsample_bytree = 0.5, 
-  lambda = 1,
-  alpha = 1
+  alpha = 0.01
 )
 
 xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 18,
+  nrounds = 121,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -250,7 +252,7 @@ hyper_grid %>%
   arrange(error) %>%
   glimpse()
 
-# before: eta 0.01, max_depth 3, min_child 3, subsample 0.5, colsample 0.5, lambda 0.1, alpha 1, trees 585
+# before: eta 0.01, max_depth 3, min_child 3, subsample 0.5, colsample 0.5, lambda 0.1, trees 198
 # week before: eta 0.01, max_depth 3, min_child 3, subsample 0.5, colsample 0.5, lambda 1, trees 20
 
 params <- list(
@@ -259,14 +261,14 @@ params <- list(
   min_child_weight = 3,
   subsample = 0.5,
   colsample_bytree = 0.5,
-  lambda = 1
+  lambda = 0.01
 )
 
 xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 20,
+  nrounds = 198,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -296,9 +298,9 @@ vip(xgbTrain)
 # TURNOUT --------------------------------
 
 # prep data
-pmxid <- docvars(bigramsWeekBeforeDFM)
+pmxid <- docvars(beforeDFMPolitical)
 
-top1000before <- convert(bigramsWeekBeforeDFM, to = "data.frame")
+top1000before <- convert(beforeDFMPolitical, to = "data.frame")
 top1000before <- top1000before[, !duplicated(colnames(top1000before))]
 top1000before <- cbind(pmxid$turnout, top1000before)
 
@@ -408,7 +410,7 @@ xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 123,
+  nrounds = 47,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -435,9 +437,9 @@ vip(xgbTrain)
 # VOTE CHOICE ------------------------------------------------------------------
 
 # prep data
-pmxid <- docvars(bigramsWeekBeforeDFM)
+pmxid <- docvars(beforeDFMPolitical)
 
-top1000before <- convert(bigramsWeekBeforeDFM, to = "data.frame")
+top1000before <- convert(beforeDFMPolitical, to = "data.frame")
 top1000before <- top1000before[, !duplicated(colnames(top1000before))]
 top1000before <- cbind(pmxid$voteChoice, top1000before)
 

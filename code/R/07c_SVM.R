@@ -14,14 +14,16 @@ load("./data/forModels/top1000BeforeDFM.RData")
 load("./data/forModels/top1000WeekBeforeDFM.RData")
 load("./data/forModels/bigramsBeforeDFM.RData")
 load("./data/forModels/bigramsWeekBeforeDFM.RData")
+load("./data/forModels/beforeDFMPolitical.RData")
+load("./data/forModels/weekBeforeDFMPolitical.RData")
 
 
 # TURNOUT -----------------------------------------------------------------------
 
 # prep data
-pmxid <- docvars(top1000BeforeDFM)
+pmxid <- docvars(weekBeforeDFMPolitical)
 
-top1000before <- convert(top1000BeforeDFM, to = "data.frame")
+top1000before <- convert(weekBeforeDFMPolitical, to = "data.frame")
 top1000before <- top1000before[, !duplicated(colnames(top1000before))]
 top1000before <- cbind(pmxid$turnout, top1000before)
 
@@ -58,11 +60,13 @@ bestTune <- best.tune(svm,
 ## top 1000 week before: cost 10, gamma 0.5
 ## bigrams before: cost 10, gamma 0.5
 ## bigrams week before: cost 10, gamma 0.5
+## political before: cost 1, gamma 0.5
+## political week before: cost 1, gamma 0.5
 
 # modeling
 svmTop1000 <- svm(turnout ~ ., 
                   data = trainDataTop1000Balanced,
-                  cost = 10,
+                  cost = 1,
                   gamma  = 0.5,
                   kernel = "linear")
 
@@ -98,9 +102,9 @@ svmPlot <- ggplot(data = topWeights,
 # VOTE CHOICE ------------------------------------------------------------------
 
 # prep data
-pmxid <- docvars(top1000BeforeDFM)
+pmxid <- docvars(weekBeforeDFMPolitical)
 
-top1000before <- convert(top1000BeforeDFM, to = "data.frame")
+top1000before <- convert(weekBeforeDFMPolitical, to = "data.frame")
 top1000before <- top1000before[, !duplicated(colnames(top1000before))]
 top1000before <- cbind(pmxid$voteChoice, top1000before)
 
@@ -138,11 +142,13 @@ bestTune <- best.tune(svm,
 ## top 1000 week before: cost 10, gamma 0.5
 ## bigrams before: cost 10, gamma 0.5
 ## bigrams week before: cost 10, gamma 0.5
+## political before: cost 10, gamma 0.5
+## political week before: cost 100, gamma 0.5
 
 # modeling
 svmTop1000 <- svm(voteChoice ~ ., 
                   data = trainDataTop1000Balanced,
-                  cost = 10,
+                  cost = 100,
                   gamma  = 0.5,
                   kernel = "linear")
 

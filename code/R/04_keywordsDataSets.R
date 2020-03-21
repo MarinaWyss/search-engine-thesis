@@ -10,8 +10,11 @@ load("./data/preppedFullData.RData")
 # search data prep
 '%ni%' <- Negate('%in%')
 
+fullDataSet <- fullDataSet %>% 
+  mutate(search_id = row_number())
+
 searchTokensSingle <- fullDataSet %>% 
-  select(pmxid, turnout, voteChoice, date, search_term) %>% 
+  select(pmxid, turnout, voteChoice, date, search_term, search_id) %>% 
   unnest_tokens(word, search_term) %>% 
   anti_join(get_stopwords()) %>% 
   filter(word %ni% c("http", "https")) %>% 
@@ -26,12 +29,24 @@ searchTokensSingle <- fullDataSet %>%
 
 # vote/register and political keywords
 registerWords <- c("vote", "voting", "register", "voter", "registration",
-                   "election", "midterm", "#electionday", "#registertovote")
+                   "election", "midterm", "#electionday", "#registertovote",
+                   "primary", "absentee", "polling", "ballot")
 
-politicalWords <- c("representatives", "congress", "candidate", 
+politicalWords <- c("representatives", "representative", "congress", "candidate", 
                     "campaign", "republican", "democrat", "democratic",
                     "kavanaugh", "bader", "sotomayor", "kagan", "gorsuch", 
-                    "alito")
+                    "alito", "government", "bipartisan", "caucus", "convention",
+                    "delegate", "filibuster", "gerrymander", "gerrymandering",
+                    "gop", "incumbent", "politics", "political",  
+                    "nominee", "nomination", "poll", "constituent", 
+                    "consituency", "democracy", "electoral", "federal", 
+                    "gubernatorial", "senate", "veto", "ratified",
+                    "constitution", "constitutional", "amendment", "ballot", "mayor", 
+                    "governor", "president", "senator", "congressman",
+                    "congresswoman", "congressional", "gop", "inauguration",
+                    "libertarian", "lobbyist", "legislation", "electorate", 
+                    "referendum", "libertarianism", "communism", "communist",
+                    "socialism", "socialist")
 
 fullSearches <- searchTokensSingle %>% 
   group_by(pmxid) %>% 
@@ -376,4 +391,81 @@ bigramsWeekBeforeDFM <- dfm(bigramsWeekBeforeCorpus)
 # saving
 save(bigramsBeforeDFM, file = "data/forModels/bigramsBeforeDFM.RData")
 save(bigramsWeekBeforeDFM, file = "data/forModels/bigramsWeekBeforeDFM.RData")
+
+
+#############################
+## full political searches ##
+#############################
+demCandidates <- candidates %>% 
+  filter(party == "Democratic") %>% 
+  mutate(name = tolower(name))
+demCandidates <- as.vector(demCandidates[ ,2])
+
+repCandidates <- candidates %>% 
+  filter(party == "Republican") %>% 
+  mutate(name = tolower(name))
+repCandidates <- as.vector(repCandidates[ ,2])
+
+politicalSearches <- searchTokensSingle %>% 
+  mutate(
+    register_word = ifelse(word %in% registerWords, 1, 0),
+    political_word = ifelse(word %in% politicalWords, 1, 0)
+  )
+
+politicianSearches <- fullDataSet %>% 
+  unnest_tokens(word, search_term, 
+                token = "ngrams",
+                n = 2) %>% 
+  anti_join(get_stopwords()) %>% 
+  mutate(word = str_replace(word, " ", "_")) %>% 
+  mutate(
+    dem = ifelse(word %in% dems, 1, 0),
+    rep = ifelse(word %in% reps, 1, 0),
+    dem_cand = ifelse(word %in% demCandidates, 1, 0),
+    rep_cand = ifelse(word %in% repCandidates, 1, 0)
+  )
+
+searchIdsPolitical <- politicalSearches %>% 
+  group_by(search_id) %>% 
+  filter(sum(register_word, political_word) >= 1) %>% 
+  select(search_id) %>% 
+  unique()
+
+searchIdsPoliticians <- politicianSearches %>% 
+  group_by(search_id) %>% 
+  filter(sum(dem, rep, dem_cand, rep_cand) >= 1) %>% 
+  select(search_id) %>% 
+  unique()
+
+searchIds<- rbind(searchIdsPolitical, searchIdsPoliticians)
+searchIds <- as.vector(unlist(searchIds))
+
+beforeTextPolitical <- fullDataSet %>% 
+  filter(date <= "2018-11-07") %>% 
+  filter(search_id %in% searchIds) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(search_term, collapse =" "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice)) %>% 
+  mutate(text = gsub("[[:punct:]]", " ", text)) 
+
+beforeCorpusPolitical <- corpus(beforeTextPolitical)
+beforeDFMPolitical <- dfm(beforeCorpusPolitical)
+beforeDFMPolitical <- dfm_trim(beforeDFMPolitical, min_termfreq = 3)
+
+weekBeforeTextPolitical <- fullDataSet %>% 
+  filter(date <= "2018-11-06" & date >= "2018-10-30") %>% 
+  filter(search_id %in% searchIds) %>% 
+  group_by(pmxid) %>% 
+  summarise(text = paste(search_term, collapse =" "),
+            turnout = min(turnout),
+            voteChoice = min(voteChoice)) %>% 
+  mutate(text = gsub("[[:punct:]]", " ", text)) 
+
+weekBeforeCorpusPolitical <- corpus(weekBeforeTextPolitical)
+weekBeforeDFMPolitical <- dfm(weekBeforeCorpusPolitical)
+weekBeforeDFMPolitical <- dfm_trim(weekBeforeDFMPolitical, min_termfreq = 3)
+
+save(beforeDFMPolitical, file = "data/forModels/beforeDFMPolitical.RData")
+save(weekBeforeDFMPolitical, file = "data/forModels/weekBeforeDFMPolitical.RData")
 

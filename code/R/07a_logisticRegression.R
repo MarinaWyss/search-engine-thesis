@@ -15,8 +15,8 @@ load("./data/forModels/searchBehaviorWeekBefore.RData")
 # join data
 allData <- merge(searchBehaviorBefore,
                  beforeSearchesJoined[c(-2, -3)],
-                 by = "pmxid") 
-
+                 by = "pmxid") %>% 
+  select(-search_id)
 
 # TURNOUT -----------------------------------------------------------------------
 

@@ -13,14 +13,16 @@ load("./data/forModels/top1000BeforeDFM.RData")
 load("./data/forModels/top1000WeekBeforeDFM.RData")
 load("./data/forModels/bigramsBeforeDFM.RData")
 load("./data/forModels/bigramsWeekBeforeDFM.RData")
+load("./data/forModels/beforeDFMPolitical.RData")
+load("./data/forModels/weekBeforeDFMPolitical.RData")
 
 
 # TURNOUT -----------------------------------------------------------------------
 
 # prep data
-pmxid <- docvars(top1000BeforeDFM)
+pmxid <- docvars(weekBeforeDFMPolitical)
 
-top1000before <- convert(top1000BeforeDFM, to = "data.frame")
+top1000before <- convert(weekBeforeDFMPolitical, to = "data.frame")
 top1000before <- top1000before[, !duplicated(colnames(top1000before))]
 top1000before <- cbind(pmxid$turnout, top1000before)
 
@@ -79,9 +81,9 @@ vip(cv, num_features = 20, geom = "point")
 # VOTE CHOICE ------------------------------------------------------------------
 
 # prep data
-pmxid <- docvars(top1000BeforeDFM)
+pmxid <- docvars(weekBeforeDFMPolitical)
 
-top1000before <- convert(top1000BeforeDFM, to = "data.frame")
+top1000before <- convert(weekBeforeDFMPolitical, to = "data.frame")
 top1000before <- top1000before[, !duplicated(colnames(top1000before))]
 top1000before <- cbind(pmxid$voteChoice, top1000before)
 
