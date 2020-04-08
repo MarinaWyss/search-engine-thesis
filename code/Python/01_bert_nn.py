@@ -164,3 +164,43 @@ test_pred = (test_pred > 0.5)
 
 from sklearn.metrics import classification_report
 print(classification_report(test_labels, test_pred))
+
+LIME --------------------------------------------------
+# create index
+orig_data = full_data.copy().reset_index()
+
+Y = orig_data['voteChoice'].values
+X = orig_data.drop(['voteChoice', 'turnout'], axis = 1)
+
+# scale
+names = X.columns
+scaler = preprocessing.StandardScaler()
+X = scaler.fit_transform(X)
+X = pd.DataFrame(X, columns = names)
+
+# determine which to compare
+pred_probs = model.predict(X)
+pred_probs = pred_probs[:,0]
+
+compare_preds = pd.DataFrame({
+    "index": orig_data['index'],
+    "preds": pred_probs,
+    'real': orig_data['voteChoice']
+})
+
+compare_preds['difference'] = abs(compare_preds['real'] - compare_preds['preds'])
+compare_preds = compare_preds.sort_values(by = ['preds'])
+
+import lime
+import lime.lime_tabular
+explainer = lime.lime_tabular.LimeTabularExplainer(X[list(X.columns)].astype(int).values,
+                                                   mode='classification',
+                                                   training_labels = full_data['voteChoice'],
+                                                   feature_names=list(X.columns))
+
+def prob(data):
+    y_pred = model.predict(data).reshape(-1, 1)
+    return np.hstack((1-y_pred, y_pred))
+
+i = 379
+exp = explainer.explain_instance(X.loc[i, X.columns].astype(int).values, prob)
