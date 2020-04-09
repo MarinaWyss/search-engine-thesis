@@ -7,6 +7,7 @@ set.seed(12345)
 
 # setwd()
 load("./data/preppedFullData.RData")
+source("./code/R/00_functions.R")
 
 uniqueUsers <- fullDataSet[!duplicated(fullDataSet$pmxid), ]
 
@@ -74,23 +75,23 @@ turnoutModel <- glm(turnout ~ gender + race + educ + marstat + employ + religion
 
 summary(turnoutModel)
 
-predsTurnout <- turnoutModel %>% predict(turnoutTestData, type = "response")
-predictedClassesTurnout <- factor(ifelse(predsTurnout > 0.5, 1, 0))
-yTurnout <- turnoutTestData$turnout
+preds <- turnoutModel %>% predict(turnoutTestData, type = "response")
+preds <- factor(ifelse(preds > 0.5, 1, 0))
+testY <- turnoutTestData$turnout
 
-accuracyTurnout <- mean(predictedClassesTurnout == yTurnout, na.rm = TRUE)
-precisionTurnout <- posPredValue(predictedClassesTurnout, yTurnout, positive = "1")
-recallTurnout <- sensitivity(predictedClassesTurnout, yTurnout, positive = "1")
-F1Turnout <- (2 * precisionTurnout * recallTurnout) / (precisionTurnout + recallTurnout)
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+f1 <- F1(precision, recall)
 
-resTableTurnout <- data.frame(accuracy = accuracyTurnout,
-                              precision = precisionTurnout, 
-                              recall = recallTurnout,
-                              F1 = F1Turnout) %>% 
+resTableTurnout <- data.frame(Accuracy = accuracy,
+                              Precision = precision, 
+                              Recall = recall,
+                              F1 = f1) %>% 
   round(2) %>% 
   kable() %>% 
   kable_styling() %>% 
-  add_header_above(c("Logistic Regression - Turnout" = 4))
+  add_header_above(c("Logistic Regression Baseline: Turnout" = 4))
 
 # vote choice baseline
 voteChoiceData <- baselineUsers %>% 
@@ -107,23 +108,23 @@ partyModel <- glm(voteChoice ~ gender + race + educ + marstat + employ + religio
 
 summary(partyModel)
 
-predsParty <- partyModel %>% predict(partyTestData, type = "response")
-predictedClassesParty <- factor(ifelse(predsParty > 0.5, 1, 0))
-yParty <- partyTestData$voteChoice
+preds <- partyModel %>% predict(partyTestData, type = "response")
+preds <- factor(ifelse(preds > 0.5, 1, 0))
+testY <- partyTestData$voteChoice
 
-accuracyParty <- mean(predictedClassesParty == yParty, na.rm = TRUE)
-precisionParty <- posPredValue(predictedClassesParty, yParty, positive = "1")
-recallParty <- sensitivity(predictedClassesParty, yParty, positive = "1")
-F1Party <- (2 * precisionParty * recallParty) / (precisionParty + recallParty)
+accuracy <- acc(preds, testY)
+precision <- prec(preds, testY)
+recall <- rec(preds, testY)
+f1 <- F1(precision, recall)
 
-resTableParty <- data.frame(accuracy = accuracyParty,
-                            precision = precisionParty, 
-                            recall = recallParty,
-                            F1 = F1Party) %>% 
+resTableParty <- data.frame(Accuracy = accuracy,
+                            Precision = precision, 
+                            Recall = recall,
+                            F1 = f1) %>% 
   round(2) %>% 
   kable() %>% 
   kable_styling() %>% 
-  add_header_above(c("Logistic Regression - Vote Choice" = 4))
+  add_header_above(c("Logistic Regression Baseline: Vote Choice" = 4))
 
 # tables
 turnoutModelOR <- exp(coef(turnoutModel))
@@ -140,8 +141,8 @@ stargazer(turnoutModel,
           ci.custom = list(turnoutModelConf),
           p = c(turnoutModelp),
           header = FALSE,
-          title = "Odds-ratios Model for Turnout", 
-          type = "text")
+          title = "Odds-ratios Model: Demographics and Turnout", 
+          type = "latex")
 
 stargazer(partyModel,
           coef = list(partyModelOR),
@@ -149,5 +150,5 @@ stargazer(partyModel,
           ci.custom = list(partyModelConf),
           p = c(partyModelp),
           header = FALSE,
-          title = "Odds-ratio Model Party Choice", 
-          type = "text")
+          title = "Odds-ratios Model: Demographics and Party Choice", 
+          type = "latex")

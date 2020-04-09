@@ -3,6 +3,7 @@ library(tidytext)
 library(textdata)
 library(sentimentr)
 library(quanteda)
+library(wesanderson)
 
 # setwd()
 load("./data/preppedFullData.RData")
@@ -45,29 +46,28 @@ partisanQueries <- searchTokens %>%
   count(word, sort = TRUE) %>% 
   slice(1:10) 
 
-partisanQueriesPlotDem <- partisanQueries %>% 
-  filter(voteChoice == "Democrat") %>% 
-  ggplot(aes(x = reorder(word, -n), y = n)) + 
-  geom_bar(stat = "identity", aes(fill = word)) +
-  labs(x = "Query",
-       y = "Number of Searches",
-       title = "Top 10 Query Terms: Democrats")
-
-partisanQueriesPlotRep <- partisanQueries %>% 
-  filter(voteChoice == "Republican") %>% 
-  ggplot(aes(x = reorder(word, -n), y = n)) + 
-  geom_bar(stat = "identity", aes(fill = word)) +
-  labs(x = "Query",
-       y = "Number of Searches",
-       title = "Top 10 Query Terms: Republicans")
+for (var in unique(partisanQueries$voteChoice)){
+  data <- partisanQueries %>% 
+    filter(voteChoice == var) 
   
-partisanQueriesPlotNon <- partisanQueries %>% 
-  filter(voteChoice == "Non-Voter") %>% 
-  ggplot(aes(x = reorder(word, -n), y = n)) + 
-  geom_bar(stat = "identity", aes(fill = word)) +
-  labs(x = "Query",
-       y = "Number of Searches",
-       title = "Top 10 Query Terms: Non-Voters")
+  plt <- ggplot(data,
+                aes(x = reorder(word, -n), 
+                    y = n)) + 
+    geom_bar(stat = "identity", 
+             aes(fill = word)) +
+    scale_fill_manual(values = wes_palette("IsleofDogs1", 
+                                           10, 
+                                           type = "continuous")) +
+    theme_bw() +
+    theme(legend.position = "none",
+          axis.title.x = element_blank(),
+          text = element_text(size = 20)) + 
+    labs(x = "Query",
+         y = "Number of Searches",
+         title = paste("Top 10 Query Terms:", var))
+  
+  print(plt)
+}
 
 ##################################
 ########## WORDSCORES ############
@@ -163,7 +163,23 @@ keynessDFMTurnout <- dfm(keynessCorpusTurnout,
 
 keynessModelTurnout <- textstat_keyness(keynessDFMTurnout, target = "Voters")
 
-textplot_keyness(keynessModelTurnout) 
+keynessTurnoutData <- textplot_keyness(keynessModelTurnout)$data
+
+ggplot(keynessTurnoutData, 
+       aes(x = reorder(feature, keyness),
+           y = keyness)) +
+  geom_bar(stat = "identity", 
+           aes(fill = right)) +
+  scale_fill_manual(values = c("#a3935b", "#9986a5"),
+                    labels = c("Non-Voters", "Voters")) +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        text = element_text(size = 20)) +
+  labs(x = "Chi-Squared",
+       title = "Top Terms Associated with Turnout",
+       fill = "")
+  
 
 # party choice
 keynessParty <- fullDataSet %>% 
@@ -189,8 +205,22 @@ keynessDFMParty <- dfm(keynessCorpusParty,
 
 keynessModelParty <- textstat_keyness(keynessDFMParty, target = "Republican")
 
-textplot_keyness(keynessModelParty) 
+keynessVoteData <- textplot_keyness(keynessModelParty)$data 
 
+ggplot(keynessVoteData, 
+       aes(x = reorder(feature, keyness),
+           y = keyness)) +
+  geom_bar(stat = "identity", 
+           aes(fill = right)) +
+  scale_fill_manual(values = c("#a3935b", "#9986a5"),
+                    labels = c("Democrats", "Republicans")) +
+  coord_flip() +
+  theme_bw() +
+  theme(axis.title.y = element_blank(),
+        text = element_text(size = 20)) +
+  labs(x = "Chi-Squared",
+       title = "Top Terms Associated with Party Choice",
+       fill = "")
 
 ##################################
 ########### SENTIMENT ############
@@ -214,10 +244,19 @@ sentimentBingParty <- sentimentBing %>%
 
 sentimentPlotParty <- ggplot(data = sentimentBingParty, 
                              aes(x = voteChoice, y = meanSentiment)) +
-  geom_bar(stat = "identity", aes(fill = voteChoice)) + 
+  geom_bar(stat = "identity", 
+           aes(fill = voteChoice)) + 
   geom_text(aes(label = round(meanSentiment, 2)), 
             position = position_dodge(width = 0.9), 
-            vjust = -0.25)
+            vjust = 2,
+            size = 8) +
+  scale_fill_manual(values = c("#a3935b", "#875f62", "#9986a5")) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        text = element_text(size = 20)) + 
+  labs(title = "Mean Bing Sentiment Score By Partisanship",
+       y = "Mean Bing Sentiment Score")
 
 # sentiment NRC
 nrc <- get_sentiments("nrc")
@@ -237,31 +276,51 @@ sentimentNRCPlotDem <- sentimentNRCParty %>%
   filter(voteChoice == "Democrat") %>% 
   group_by(sentiment) %>% 
   summarize(countSentiment = length(sentiment)) %>% 
-  ggplot(aes(x = sentiment, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment)) +
-  labs(x = "Sentiment",
-       y = "Number of Searches",
-       title = "Sentiment Distribution: Democrats")
+  ggplot(aes(x = sentiment, 
+             y = countSentiment)) + 
+  geom_bar(stat = "identity", 
+           aes(fill = sentiment)) +
+  scale_fill_manual(values = wes_palette("IsleofDogs1", 
+                                         8, 
+                                         type = "continuous")) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        text = element_text(size = 20)) + 
+  labs(y = "Number of Searches",
+       title = "NRC Sentiment Distribution: Democrats")
 
 sentimentNRCPlotRep <- sentimentNRCParty %>% 
   filter(voteChoice == "Republican") %>% 
   group_by(sentiment) %>% 
   summarize(countSentiment = length(sentiment)) %>% 
-  ggplot(aes(x = sentiment, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment)) +
-  labs(x = "Sentiment",
-       y = "Number of Searches",
-       title = "Sentiment Distribution: Republicans")
+  ggplot(aes(x = sentiment, 
+             y = countSentiment)) + 
+  geom_bar(stat = "identity", 
+           aes(fill = sentiment)) +
+  scale_fill_manual(values = pal) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        text = element_text(size = 20)) + 
+  labs(y = "Number of Searches",
+       title = "NRC Sentiment Distribution: Republicans")
 
 sentimentNRCPlotNon <- sentimentNRCParty %>% 
   filter(voteChoice == "Non Voter") %>% 
   group_by(sentiment) %>% 
   summarize(countSentiment = length(sentiment)) %>% 
-  ggplot(aes(x = sentiment, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment))  +
-  labs(x = "Sentiment",
-       y = "Number of Searches",
-       title = "Sentiment Distribution: Non Voters")
+  ggplot(aes(x = sentiment, 
+             y = countSentiment)) + 
+  geom_bar(stat = "identity", 
+           aes(fill = sentiment)) +
+  scale_fill_manual(values = pal) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        text = element_text(size = 20)) + 
+  labs(y = "Number of Searches",
+       title = "NRC Sentiment Distribution: Non-voters")
 
 # sentiment sentence-level
 sentenceLevel <- fullDataSet %>% 
@@ -290,97 +349,24 @@ sentimentSentenceParty <- sentenceSentiment %>%
   filter(!is.na(voteChoice) & voteChoice != 3) %>% 
   mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
                                 voteChoice == 2 ~ "Democrat",
-                                voteChoice == 4 ~ "Non Voter")) 
+                                voteChoice == 4 ~ "Non Voter")) %>% 
+  group_by(voteChoice, sentiment_category) %>% 
+  summarize(countSentiment = length(sentiment_category)) 
 
-sentimentSentencePlotDem <- sentimentSentenceParty %>% 
-  filter(voteChoice == "Democrat") %>% 
-  group_by(sentiment_category) %>% 
-  summarize(countSentiment = length(sentiment_category)) %>% 
-  ggplot(aes(x = sentiment_category, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment_category)) +
+
+sentimentSentencePlot <- sentimentSentenceParty %>% 
+  ggplot(aes(x = sentiment_category, 
+             y = countSentiment)) + 
+  geom_bar(stat = "identity", 
+           aes(fill = sentiment_category)) +
+  scale_fill_manual(values = c("#a3935b", "#875f62", "#9986a5")) +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.x = element_blank(),
+        text = element_text(size = 20)) + 
+  facet_wrap( ~ voteChoice,
+              scales = "free_y") +
   labs(x = "Sentiment",
        y = "Number of Searches",
-       title = "Sentiment Distribution: Democrats")
-
-sentimentSentencePlotRep <- sentimentSentenceParty %>% 
-  filter(voteChoice == "Republican") %>% 
-  group_by(sentiment_category) %>% 
-  summarize(countSentiment = length(sentiment_category)) %>% 
-  ggplot(aes(x = sentiment_category, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment_category)) +
-  labs(x = "Sentiment",
-       y = "Number of Searches",
-       title = "Sentiment Distribution: Republicans")
-
-sentimentSentencePlotNon <- sentimentSentenceParty %>% 
-  filter(voteChoice == "Non Voter") %>% 
-  group_by(sentiment_category) %>% 
-  summarize(countSentiment = length(sentiment_category)) %>% 
-  ggplot(aes(x = sentiment_category, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment_category)) +
-  labs(x = "Sentiment",
-       y = "Number of Searches",
-       title = "Sentiment Distribution: Non Voters")
-
-# by whole block of text
-wholeText <- fullDataSet %>% 
-  group_by(pmxid) %>% 
-  summarise(text = paste(search_term, collapse =" ")) %>% 
-  mutate(text = gsub("[[:punct:]]", " ", text))
-
-joinedText <- merge(wholeText, uniqueUsers)
-
-sentimentWhole <- sentiment(joinedText$text)
-
-summary(sentimentWhole$sentiment)
-# Min.    1st Qu.  Median  Mean   3rd Qu. Max. 
-#-4.6533  0.0000  0.1960  0.2828  0.5354  5.9522 
-
-sentimentPlotWhole <- ggplot(data = sentimentWhole, aes(x = sentiment)) +
-  geom_histogram(bins = 50)
-
-uniqueUsers$sentimentWhole <- sentimentWhole$sentiment
-
-sentimentWhole <- uniqueUsers %>% 
-  mutate(sentiment_category = case_when(sentimentWhole > 0 ~ "positive", 
-                                        sentimentWhole < 0 ~ "negative",
-                                        TRUE ~ "neutral"))
-
-
-sentenceWholeParty <- sentenceSentiment %>% 
-  select(pmxid, voteChoice, sentiment_category) %>% 
-  filter(!is.na(voteChoice) & voteChoice != 3) %>% 
-  mutate(voteChoice = case_when(voteChoice == 1 ~ "Republican",
-                                voteChoice == 2 ~ "Democrat",
-                                voteChoice == 4 ~ "Non Voter")) 
-
-sentimentWholePlotDem <- sentenceWholeParty %>% 
-  filter(voteChoice == "Democrat") %>% 
-  group_by(sentiment_category) %>% 
-  summarize(countSentiment = length(sentiment_category)) %>% 
-  ggplot(aes(x = sentiment_category, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment_category)) +
-  labs(x = "Sentiment of all Queries",
-       y = "Number of Users",
-       title = "Sentiment Distribution: Democrats")
-
-sentimentWholePlotRep <- sentenceWholeParty %>% 
-  filter(voteChoice == "Republican") %>% 
-  group_by(sentiment_category) %>% 
-  summarize(countSentiment = length(sentiment_category)) %>% 
-  ggplot(aes(x = sentiment_category, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment_category)) +
-  labs(x = "Sentiment of all Queries",
-       y = "Number of Users",
-       title = "Sentiment Distribution: Republicans")
-
-sentimentWholePlotNon <- sentenceWholeParty %>% 
-  filter(voteChoice == "Non Voter") %>% 
-  group_by(sentiment_category) %>% 
-  summarize(countSentiment = length(sentiment_category)) %>% 
-  ggplot(aes(x = sentiment_category, y = countSentiment)) + 
-  geom_bar(stat = "identity", aes(fill = sentiment_category)) +
-  labs(x = "Sentiment of all Queries",
-       y = "Number of Users",
-       title = "Sentiment Distribution: Non Voters")
+       title = "Sentiment Distribution By Partisanship")
 

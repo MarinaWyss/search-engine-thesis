@@ -4,6 +4,8 @@ library(DMwR)
 library(caret)
 library(kableExtra)
 library(vip)
+library(wordcloud)
+library(wesanderson)
 
 set.seed(2342)
 
@@ -298,9 +300,9 @@ vip(xgbTrain)
 # TURNOUT --------------------------------
 
 # prep data
-pmxid <- docvars(beforeDFMPolitical)
+pmxid <- docvars(top1000BeforeDFM)
 
-top1000before <- convert(beforeDFMPolitical, to = "data.frame")
+top1000before <- convert(top1000BeforeDFM, to = "data.frame")
 top1000before <- top1000before[, !duplicated(colnames(top1000before))]
 top1000before <- cbind(pmxid$turnout, top1000before)
 
@@ -318,6 +320,8 @@ indexTop1000Before <- createDataPartition(top1000before$turnout,
 
 trainDataTop1000 <- top1000before[indexTop1000Before, ]
 testDataTop1000  <- top1000before[-indexTop1000Before, ]
+
+index <- rownames(testDataTop1000)
 
 # resampling the data 
 trainDataTop1000Balanced <- SMOTE(turnout ~., 
@@ -403,14 +407,15 @@ params <- list(
   max_depth = 3,
   min_child_weight = 3,
   subsample = 0.5,
-  colsample_bytree = 0.5
+  colsample_bytree = 0.5,
+  gamma = 1
 )
 
 xgbTrain <- xgboost(
   params = params,
   data = X,
   label = Y,
-  nrounds = 47,
+  nrounds = 100,
   objective = "binary:logistic",
   verbose = 0
 )
@@ -430,8 +435,61 @@ recall <- rec(preds, testY)
 f1 <- F1(precision, recall)
 metricsTurnout <- metrics(accuracy, precision, recall, f1) 
 
+# evaluation
+comparison <- data.frame(index, preds, testY)
+
+comparison <- comparison %>% 
+  mutate(difference = abs(as.numeric(as.character(testY)) - preds)) %>% 
+  arrange(difference)
+
+# 603 good pred non-voter
+# 509 bad pred non-voter
+# 247 good pred voter
+# 131 bad pred voter
+
+prepDataWordCloud <- function(num){
+  data <- top1000before %>% 
+    mutate(index = rownames(top1000before)) %>% 
+    filter(index == num) %>% 
+    select(-index)
+  data <- data[, colSums(data != 0) > 0]
+  data <- data.frame(t(data[-1]))
+  data <- rownames_to_column(data, var = "word")
+  colnames(data) <- c("word", "count")
+  return(data)
+}
+
+dat <- prepDataWordCloud(131)
+
+dev.new(width = 10, height = 8)
+wordcloud(words = dat$word, 
+          freq = dat$count, 
+          min.freq = 3, 
+          random.order = FALSE,
+          random.color = FALSE,
+          colors = wes_palette("IsleofDogs1"))
+
+dev.off()
+
 # feature importance
-vip(xgbTrain) 
+viplotData <- vip(xgbTrain)$data
+
+ggplot(viplotData, 
+       aes(reorder(Variable, Importance), 
+           Importance)) +
+  geom_col(aes(fill = Importance)) +
+  coord_flip() +
+  scale_fill_gradient(low = "#a3935b", high = "#9986a5") +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title.y = element_blank(),
+        text = element_text(size = 20)) + 
+  labs(title = "XGBoost Variable Importance: Turnout")
+
+
+
+
+
 
 
 # VOTE CHOICE ------------------------------------------------------------------

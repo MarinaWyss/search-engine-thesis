@@ -20,7 +20,6 @@ searchData <- searchData %>%
 # 913 unique users over entire timespan
 length(unique(searchData$pmxid)) 
 
-
 # dropping sequential duplicate search terms
 searchData <- searchData %>% 
   group_by(pmxid, date) %>% 
@@ -162,7 +161,7 @@ resTable <- data.frame(accuracy, precision, recall, F1) %>%
   round(2) %>% 
   kable() %>% 
   kable_styling() %>% 
-  add_header_above(c("Logistic Regression - Full URLs" = 4))
+  add_header_above(c("Robustness Check: Logistic Regression on URLs" = 4))
 
 modelOR <- exp(coef(model))
 modelConf <- exp(confint(model))
@@ -175,7 +174,7 @@ stargazer(model,
           p = c(modelP),
           header = FALSE,
           title = "Odds-ratios Model for Full URLs", 
-          type = "text")
+          type = "latex")
 
 
 # descriptive stats 

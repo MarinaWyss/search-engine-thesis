@@ -506,3 +506,15 @@ write.csv(textBlockWeekBefore, file = "data/forModels/textBlockWeekBefore.csv")
 write.csv(textBlockPoliticalBefore, file = "data/forModels/textBlockPoliticalBefore.csv")
 write.csv(textBlockPoliticalWeekBefore, file = "data/forModels/textBlockPoliticalWeekBefore.csv")
 
+### NLP ###
+nlpTextBefore <- fullDataSet %>% 
+  filter(date <= "2018-11-07") %>% 
+  select(turnout, voteChoice, search_term) %>% 
+  mutate(voteChoice = case_when(voteChoice %in% c(3, 4) ~ NA_real_,
+                                voteChoice == 2 ~ 0,
+                                voteChoice == 1 ~ 1)) %>% 
+  unique()
+
+write.csv(nlpTextBefore, file = "data/forModels/nlpTextBefore.csv")
+
+
