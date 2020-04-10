@@ -46,31 +46,28 @@ partisanQueries <- searchTokens %>%
   count(word, sort = TRUE) %>% 
   slice(1:10) 
 
-for (var in unique(partisanQueries$voteChoice)){
-  data <- partisanQueries %>% 
-    filter(voteChoice == var) 
-  
-  plt <- ggplot(data,
-                aes(x = reorder(word, -n), 
-                    y = n)) + 
+pal <- c("#9986a5", "#875f62", "#824c34", "#b0915b",
+         "#a3935b", "#393324", "#514d4f", "#c2babd",
+         "#b7afad", "#8d8680")
+
+partisanQueries %>% 
+  filter(voteChoice == "Democrat") %>% 
+  ggplot(aes(x = reorder(word, -n), 
+           y = n)) + 
     geom_bar(stat = "identity", 
-             aes(fill = word)) +
+             aes(fill = forcats::fct_inorder(word))) +
     geom_text(aes(label = n, 
               vjust = 2,
               size = 7)) +
-    scale_fill_manual(values = wes_palette("IsleofDogs1", 
-                                           10, 
-                                           type = "continuous")) +
+    scale_fill_manual(values = pal) +
     theme_bw() +
-    theme(legend.position = "none",
+    theme(title = element_text(size = 15),
+          legend.position = "none",
           axis.title.x = element_blank(),
           text = element_text(size = 20)) + 
     labs(x = "Query",
          y = "Number of Searches",
-         title = paste("Top 10 Query Terms:", var))
-  
-  print(plt)
-}
+         title = "Top 10 Query Terms: Democrats")
 
 ##################################
 ########## WORDSCORES ############

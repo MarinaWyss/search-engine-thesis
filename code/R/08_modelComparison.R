@@ -30,8 +30,8 @@ modelResults %>%
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        text = element_text(size = 15),
-        axis.text.x = element_text(angle = 30, vjust = 1.0, hjust = 1.0)) + 
+        text = element_text(size = 12),
+        axis.text.x = element_text(angle = 45, vjust = 1.0, hjust = 1.0)) + 
   labs(title = "Model Comparison: Turnout",
        y = "Accuracy")
 
@@ -56,8 +56,8 @@ modelResults %>%
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        text = element_text(size = 15),
-        axis.text.x = element_text(angle = 30, vjust = 1.0, hjust = 1.0)) + 
+        text = element_text(size = 12),
+        axis.text.x = element_text(angle = 45, vjust = 1.0, hjust = 1.0)) + 
   labs(title = "Model Comparison: Turnout",
        y = "F1 Score")
 
@@ -84,8 +84,8 @@ modelResults %>%
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        text = element_text(size = 15),
-        axis.text.x = element_text(angle = 30, vjust = 1.0, hjust = 1.0)) + 
+        text = element_text(size = 12),
+        axis.text.x = element_text(angle = 45, vjust = 1.0, hjust = 1.0)) + 
   labs(title = "Model Comparison: Party Choice",
        y = "Accuracy")
 
@@ -110,8 +110,8 @@ modelResults %>%
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        text = element_text(size = 15),
-        axis.text.x = element_text(angle = 30, vjust = 1.0, hjust = 1.0)) + 
+        text = element_text(size = 12),
+        axis.text.x = element_text(angle = 45, vjust = 1.0, hjust = 1.0)) + 
   labs(title = "Model Comparison: Party Choice ",
        y = "F1 Score")
 
