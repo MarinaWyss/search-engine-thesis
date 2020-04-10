@@ -141,8 +141,9 @@ stargazer(turnoutModel,
           ci.custom = list(turnoutModelConf),
           p = c(turnoutModelp),
           header = FALSE,
+          no.space = TRUE,
           title = "Odds-ratios Model: Demographics and Turnout", 
-          type = "latex")
+          type = "html")
 
 stargazer(partyModel,
           coef = list(partyModelOR),

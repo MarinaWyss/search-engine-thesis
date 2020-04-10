@@ -158,12 +158,12 @@ searchesPlotParty <- ggplot(data = searchesParty,
   geom_text(aes(label = round(mean, 2)), 
             position = position_dodge(width = 0.9), 
             vjust = 2,
-            size = 8) +
+            size = 7) +
   scale_fill_manual(values = c("#a3935b", "#875f62", "#9986a5")) +
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        text = element_text(size = 20)) + 
+        text = element_text(size = 22)) + 
   labs(title = "Mean Number of Queries By Partisanship",
        y = "Mean Number of Queries")
   
@@ -198,12 +198,12 @@ searchLengthPlotParty <- ggplot(data = searchLengthParty,
   geom_text(aes(label = round(mean, 2)), 
             position = position_dodge(width = 0.9), 
             vjust = 2,
-            size = 8) +
+            size = 7) +
   scale_fill_manual(values = c("#a3935b", "#875f62", "#9986a5")) +
   theme_bw() +
   theme(legend.position = "none",
         axis.title.x = element_blank(),
-        text = element_text(size = 20)) + 
+        text = element_text(size = 22)) + 
   labs(title = "Mean Query Length By Partisanship",
        y = "Mean Query Length (Characters)")
   
