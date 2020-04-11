@@ -1,4 +1,5 @@
 library(tidyverse)
+library(kableExtra)
 library(wesanderson)
 
 modelResults <- read.csv("./data/modelResults.csv")
@@ -6,6 +7,8 @@ modelResults <- read.csv("./data/modelResults.csv")
 modelResults <- modelResults %>% 
   mutate(accuracy = accuracy / 100,
          f1score = f1score / 100)
+
+tableData <- read.csv("./data/modelResultsTable.csv")
 
 # TURNOUT ----------------------------------------------------------
 
@@ -61,6 +64,14 @@ modelResults %>%
   labs(title = "Model Comparison: Turnout",
        y = "F1 Score")
 
+tableData %>% 
+  filter(researchQ == "turnout") %>% 
+  select(-researchQ) %>% 
+  rename(`F1 Score` = F1.score) %>% 
+  kable() %>% 
+  kable_styling() %>% 
+  add_header_above(c("Model Comparison: Turnout" = 4))
+
 # VOTE CHOICE ----------------------------------------------------------
 
 # accuracy
@@ -115,6 +126,13 @@ modelResults %>%
   labs(title = "Model Comparison: Party Choice ",
        y = "F1 Score")
 
+tableData %>% 
+  filter(researchQ == "voteChoice") %>% 
+  select(-researchQ) %>% 
+  rename(`F1 Score` = F1.score) %>% 
+  kable() %>% 
+  kable_styling() %>% 
+  add_header_above(c("Model Comparison: Party Choice" = 4))
 
 
   
